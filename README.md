@@ -1,4 +1,4 @@
-<h1 align="center">[Abandoned but not Forgotten]</h1>
+<h1 align="center">Abandoned but not Forgotten</h1>
 
 <p align="center">
   <b>An interactive digital museum for kids about the hardware NASA left on the Moon, on Mars and in deep space.</b>
@@ -20,13 +20,13 @@
 
 Since the 1960s, NASA has left hardware across the solar system: on the Moon, on Mars and in deep space. School-age space enthusiasts often hear only about active missions, while the machines that came before them remain silent.
 
-**[PROJECT NAME]** is an interactive web page designed as a digital museum for kids. It brings together:
+**Abandoned but not Forgotten** is an interactive web page designed as a digital museum for kids. It brings together:
 
 - A short **welcome animation**
 - **Science cards** about each piece of hardware
 - A **mini-game** built in TurboWarp
 
-Built for the **NASA Space Apps Challenge**: *[Abandoned but not Forgotten]*.
+Built for the **NASA Space Apps Challenge**: *Abandoned but not Forgotten*.
 
 ## The Game
 
