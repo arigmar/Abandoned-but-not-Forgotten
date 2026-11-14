@@ -1,0 +1,40 @@
+# Astro & Vite build / generated output
+dist/
+.astro/
+.vite/
+.output/
+.vercel/
+.netlify/
+
+# TypeScript incremental build & caches
+*.tsbuildinfo
+.eslintcache
+.cache/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Tests & coverage
+coverage/
+test-results/
+playwright-report/
+
+# Editors & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
