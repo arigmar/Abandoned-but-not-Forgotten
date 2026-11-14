@@ -1,0 +1,165 @@
+---
+import { Image } from 'astro:assets';
+import type { Artifact } from '../lib/archive';
+import HoldToLink from './HoldToLink.astro';
+
+interface Props {
+  artifacts: Artifact[];
+}
+
+const { artifacts } = Astro.props;
+---
+
+<dialog
+  id="plaque-dialog"
+  aria-labelledby="plaque-title"
+  data-link-state="dormant"
+  class="plaque-dialog m-auto max-h-[90vh] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto border border-[var(--color-border-strong)] bg-[var(--color-slate)] p-0 text-[var(--color-text-primary)]"
+>
+  <div class="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] bg-[var(--color-void)] px-4 py-3 sm:px-6">
+    <span class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+      Museum Plaque // Surface Telemetry Record
+    </span>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        id="plaque-copy-link"
+        class="border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3 py-1 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+      >
+        Copy link
+      </button>
+      <button
+        type="button"
+        id="plaque-close"
+        aria-label="Close museum plaque"
+        class="border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3 py-1 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+      >
+        Close [ESC]
+      </button>
+    </div>
+  </div>
+
+  <div class="space-y-6 p-4 sm:p-6">
+    <!-- Verification Status Banner -->
+    <div
+      id="plaque-verification-banner"
+      class="flex flex-wrap items-center justify-between gap-2 border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-2 font-mono-telemetry text-[11px]"
+    >
+      <span id="plaque-verification-badge" class="font-bold tracking-[0.12em]"></span>
+      <span id="plaque-verification-note" class="text-[var(--color-text-secondary)]"></span>
+    </div>
+
+    <!-- Serif Plaque Inscription -->
+    <header class="border-b border-[var(--color-border)] pb-4">
+      <p
+        id="plaque-meta-top"
+        class="font-mono-telemetry text-xs tracking-[0.14em] text-[var(--color-text-secondary)] uppercase"
+      ></p>
+      <h3
+        id="plaque-title"
+        class="mt-2 font-serif-display text-4xl leading-none tracking-tight text-[var(--color-text-primary)] sm:text-5xl"
+      ></h3>
+      <p
+        id="plaque-years"
+        class="mt-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-turquoise)]"
+      ></p>
+    </header>
+
+    <!-- Optimized Monochrome Duotone Media via astro:assets -->
+    <div class="border border-[var(--color-border)] bg-[var(--color-void)] p-3">
+      {
+        artifacts.map((artifact) =>
+          artifact.image?.metadata ? (
+            <figure data-plaque-media={artifact.id} hidden class="space-y-2">
+              <div class="relative overflow-hidden border border-[var(--color-border)] bg-[var(--color-void)]">
+                <Image
+                  src={artifact.image.metadata}
+                  alt={artifact.image.alt}
+                  data-plaque-img
+                  class="cold-duotone block h-auto w-full object-cover"
+                />
+                <div
+                  hidden
+                  data-image-fallback
+                  class="flex h-44 flex-col items-center justify-center bg-reticle-grid p-4 text-center"
+                >
+                  <p class="font-mono-telemetry text-xs tracking-[0.14em] text-[var(--color-text-secondary)]">
+                    IMAGE SIGNAL UNAVAILABLE · MONOCHROME FALLBACK
+                  </p>
+                  <p class="mt-1 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)]">
+                    {artifact.name} · {artifact.nssdcId}
+                  </p>
+                </div>
+              </div>
+              <figcaption class="flex flex-wrap items-center justify-between gap-2 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)]">
+                <span>{artifact.image.credit}</span>
+                <a
+                  href={artifact.image.originalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-[var(--color-turquoise)] underline underline-offset-2"
+                >
+                  Original NASA source
+                </a>
+              </figcaption>
+            </figure>
+          ) : null,
+        )
+      }
+    </div>
+
+    <!-- Mono Telemetry Block -->
+    <dl class="grid grid-cols-1 gap-3 border border-[var(--color-border)] bg-[var(--color-void)] p-4 sm:grid-cols-2">
+      <div>
+        <dt class="font-mono-telemetry text-[10px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Launch Date (UTC)
+        </dt>
+        <dd id="plaque-launch" class="mt-0.5 font-mono-telemetry text-xs text-[var(--color-text-primary)]"></dd>
+      </div>
+      <div>
+        <dt class="font-mono-telemetry text-[10px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Last Contact &amp; Silence
+        </dt>
+        <dd id="plaque-silence" class="mt-0.5 font-mono-telemetry text-xs text-[var(--color-turquoise)]"></dd>
+      </div>
+      <div>
+        <dt class="font-mono-telemetry text-[10px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Landing Site
+        </dt>
+        <dd id="plaque-site" class="mt-0.5 font-mono-telemetry text-xs text-[var(--color-text-primary)]"></dd>
+      </div>
+      <div>
+        <dt class="font-mono-telemetry text-[10px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Coordinates
+        </dt>
+        <dd id="plaque-coords" class="mt-0.5 font-mono-telemetry text-xs text-[var(--color-text-primary)]"></dd>
+      </div>
+      <div class="sm:col-span-2">
+        <dt class="font-mono-telemetry text-[10px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          End of Contact Cause
+        </dt>
+        <dd id="plaque-end-cause" class="mt-1 text-sm leading-relaxed text-[var(--color-text-primary)]"></dd>
+      </div>
+    </dl>
+
+    <!-- Scientific Value -->
+    <section aria-label="Scientific value">
+      <h4 class="font-mono-telemetry text-[11px] font-bold tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+        Scientific Significance
+      </h4>
+      <p id="plaque-science" class="mt-2 text-sm leading-relaxed text-[var(--color-text-primary)] sm:text-base"></p>
+      <p id="plaque-site-desc" class="mt-2 text-xs leading-relaxed text-[var(--color-text-secondary)]"></p>
+    </section>
+
+    <!-- Hold to Re-establish Symbolic Link -->
+    <HoldToLink />
+
+    <!-- Linked Official Sources -->
+    <section aria-label="Official mission sources" class="border-t border-[var(--color-border)] pt-4">
+      <h4 class="font-mono-telemetry text-[11px] font-bold tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+        Official Sources &amp; Archival Records
+      </h4>
+      <ul id="plaque-sources-list" class="mt-2.5 space-y-1.5 font-mono-telemetry text-xs"></ul>
+    </section>
+  </div>
+</dialog>

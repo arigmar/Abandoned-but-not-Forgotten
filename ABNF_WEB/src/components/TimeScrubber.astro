@@ -1,0 +1,107 @@
+---
+interface Props {
+  minYear: number;
+  maxYear: number;
+  initialCount: number;
+}
+
+const { minYear, maxYear, initialCount } = Astro.props;
+---
+
+<div class="surface-slate p-4 sm:p-5">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <label
+          for="epoch-scrubber"
+          class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase"
+        >
+          Epoch Time Scrubber
+        </label>
+        <span class="border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2 py-0.5 font-mono-telemetry text-xs font-bold text-[var(--color-turquoise)]">
+          YEAR // <span id="scrubber-year-value">{maxYear}</span> UTC
+        </span>
+      </div>
+      <p
+        id="scrubber-state-summary"
+        class="mt-1 font-mono-telemetry text-[11px] tracking-[0.08em] text-[var(--color-text-secondary)]"
+      >
+        0 OPERATING · {initialCount} SILENT · 0 NOT YET LAUNCHED
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-3 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]">
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block h-2 w-2 bg-[var(--color-amber)]" aria-hidden="true"></span>
+          OPERATING
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block h-2 w-2 bg-[var(--color-dormant)]" aria-hidden="true"></span>
+          SILENT
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block h-2 w-2 border border-dashed border-[var(--color-dormant)]" aria-hidden="true"></span>
+          PRE-LAUNCH
+        </span>
+      </div>
+
+      <button
+        type="button"
+        id="scrubber-reset-btn"
+        disabled
+        class="border border-[var(--color-border-strong)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Back to today
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-4 flex items-center gap-3">
+    <span class="font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
+      {minYear}
+    </span>
+    <input
+      id="epoch-scrubber"
+      type="range"
+      min={minYear}
+      max={maxYear}
+      value={maxYear}
+      step="1"
+      class="scrubber-range w-full cursor-pointer"
+      aria-label="Scrub historical timeline from 1967 to present year"
+    />
+    <span class="font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
+      {maxYear}
+    </span>
+  </div>
+</div>
+
+<style>
+  .scrubber-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--color-border-strong);
+    border-radius: 0;
+  }
+
+  .scrubber-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--color-turquoise);
+    border: 2px solid var(--color-void);
+    cursor: pointer;
+  }
+
+  .scrubber-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--color-turquoise);
+    border: 2px solid var(--color-void);
+    border-radius: 0;
+    cursor: pointer;
+  }
+</style>

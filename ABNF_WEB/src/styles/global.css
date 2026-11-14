@@ -1,1 +1,162 @@
 @import "tailwindcss";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/instrument-serif/400-italic.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
+@import "@fontsource/hanken-grotesk/400.css";
+@import "@fontsource/hanken-grotesk/500.css";
+@import "@fontsource/hanken-grotesk/600.css";
+@import "@fontsource/hanken-grotesk/700.css";
+@import "./tokens.css";
+
+@layer base {
+  html {
+    background-color: var(--color-void);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-void);
+    color: var(--color-text-primary);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: var(--color-turquoise-dim);
+    color: var(--color-text-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-turquoise);
+    outline-offset: 2px;
+  }
+}
+
+.font-serif-display {
+  font-family: var(--font-serif);
+}
+
+.font-mono-telemetry {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.font-sans-body {
+  font-family: var(--font-sans);
+}
+
+/* Subtle engineering reticle grid background */
+.bg-reticle-grid {
+  background-image:
+    linear-gradient(to right, var(--color-reticle) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-reticle) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.surface-slate {
+  background-color: var(--color-slate);
+  border: 1px solid var(--color-border);
+}
+
+.surface-void {
+  background-color: var(--color-void);
+  border: 1px solid var(--color-border);
+}
+
+/* Cold monochrome duotone filter applied cleanly to NASA / schematic media */
+.cold-duotone {
+  filter: url(#cold-duotone-filter) contrast(1.06);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+section[id] {
+  scroll-margin-top: 5.75rem;
+}
+
+/* Functional radar sweep animation */
+@keyframes radar-sweep-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-sweep-arm {
+  transform-origin: center;
+  animation: radar-sweep-spin 16s linear infinite;
+}
+
+@keyframes pending-scan-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.pending-radar-bar {
+  animation: pending-scan-bar 3.2s linear infinite;
+}
+
+@keyframes amber-pulse-ring {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.pulse-operating {
+  animation: amber-pulse-ring 2.2s ease-in-out infinite;
+}
+
+/* Dialog backdrop & plaque state transitions */
+dialog.plaque-dialog::backdrop {
+  background-color: rgba(9, 13, 22, 0.86);
+  backdrop-filter: blur(2px);
+}
+
+dialog.plaque-dialog[data-link-state="scanning"] {
+  border-color: var(--color-turquoise-border);
+}
+
+dialog.plaque-dialog[data-link-state="recovered"] {
+  border-color: var(--color-amber-border);
+}
+
+/* Strict reduced-motion support */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .radar-sweep-arm,
+  .pending-radar-bar,
+  .pulse-operating {
+    animation: none !important;
+  }
+}

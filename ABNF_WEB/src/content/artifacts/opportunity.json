@@ -1,0 +1,55 @@
+{
+  "id": "opportunity",
+  "name": "Opportunity (MER-B)",
+  "nssdcId": "2003-032A",
+  "agency": "NASA / JPL-Caltech",
+  "body": "mars",
+  "type": "rover",
+  "launchDate": "2003-07-08",
+  "lastContactDate": "2018-06-10",
+  "site": {
+    "name": "Meridiani Planum (Perseverance Valley)",
+    "lat": -1.9462,
+    "lon": -5.5266,
+    "description": "Equatorial hematite-bearing plain where Opportunity traversed 45.16 kilometers from Eagle Crater to Perseverance Valley on the western rim of Endeavour Crater."
+  },
+  "endCause": "A planet-encircling 2018 Martian dust storm darkened the atmosphere above Meridiani Planum, preventing the solar arrays from recharging batteries.",
+  "scientificValue": "Engineered for a 90-sol prime mission and a 1,000-meter traverse, Opportunity operated for 5,111 sols and drove 45.16 kilometers across Martian bedrock. Its spectral and microscopic analyses established that liquid water once altered surface rocks and flowed through subsurface fractures in ancient habitable environments.",
+  "legacy": [
+    {
+      "finding": "Identified hematite-rich mineral spherules ('blueberries') embedded in layered sulfate outcrops at Eagle Crater, providing direct geologic evidence of past liquid water.",
+      "sourceTitle": "NASA Science — Opportunity (MER-B) Mission Overview",
+      "sourceUrl": "https://science.nasa.gov/mission/mer-opportunity/"
+    },
+    {
+      "finding": "Discovered bright calcium-sulfate (gypsum) mineral veins along the rim of Endeavour Crater formed by low-temperature water circulating through bedrock fractures.",
+      "sourceTitle": "NASA Science — Opportunity (MER-B) Mission Overview",
+      "sourceUrl": "https://science.nasa.gov/mission/mer-opportunity/"
+    },
+    {
+      "finding": "Established a 45.16 km extraterrestrial wheel-odometry record over 5,111 sols across Meridiani Planum.",
+      "sourceTitle": "NASA NSSDCA Master Catalog — 2003-032A",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=2003-032A"
+    }
+  ],
+  "verification": "verified",
+  "sources": [
+    {
+      "title": "NASA Science — Opportunity (MER-B)",
+      "url": "https://science.nasa.gov/mission/mer-opportunity/",
+      "accessedDate": "2026-11-14"
+    },
+    {
+      "title": "NASA NSSDCA Master Catalog — Mars Exploration Rover B (2003-032A)",
+      "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=2003-032A",
+      "accessedDate": "2026-11-14"
+    }
+  ],
+  "image": {
+    "file": "../../assets/artifacts/opportunity.svg",
+    "alt": "Monochrome technical schematic of the NASA Opportunity (MER-B) six-wheeled Mars rover showing solar arrays, panoramic camera mast, high-gain antenna, and instrument arm.",
+    "credit": "Archival technical schematic based on NASA / JPL-Caltech MER-B engineering documentation",
+    "originalUrl": "https://science.nasa.gov/mission/mer-opportunity/"
+  },
+  "featured": true
+}

@@ -1,0 +1,56 @@
+{
+  "id": "ingenuity",
+  "name": "Ingenuity (Mars Helicopter)",
+  "nssdcId": "2020-052A",
+  "agency": "NASA / JPL-Caltech",
+  "body": "mars",
+  "type": "helicopter",
+  "launchDate": "2020-07-30",
+  "lastContactDate": "2024-04-16",
+  "site": {
+    "name": "Jezero Crater (Valinor Hills / Airfield Chi)",
+    "lat": 18.4447,
+    "lon": 77.4508,
+    "description": "Deployed in Jezero Crater and flown across 72 sorties before coming to rest at Airfield Chi in the Valinor Hills region near Neretva Vallis."
+  },
+  "endCause": "Carbon-composite rotor blade tip damage during Flight 72 landing on January 18, 2024 permanently grounded the helicopter; final radio telemetry via Perseverance arrived on April 16, 2024.",
+  "scientificValue": "Built as a five-flight technology demonstration for a 30-sol test window, Ingenuity operated for nearly three Earth years and completed 72 flights totaling 17.0 kilometers. It proved sustained aerodynamic flight in Mars' thin carbon-dioxide atmosphere and pioneered aerial scouting ahead of surface rovers.",
+  "legacy": [
+    {
+      "finding": "Achieved the first powered, controlled aerodynamic flight on another planet on April 19, 2021 at Wright Brothers Field in Jezero Crater.",
+      "sourceTitle": "NASA Science — Ingenuity Mars Helicopter",
+      "sourceUrl": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/"
+    },
+    {
+      "finding": "Completed 72 flights accumulating approximately 128.8 flight minutes and 17.0 kilometers of horizontal ground distance.",
+      "sourceTitle": "NASA Science — Ingenuity Mars Helicopter",
+      "sourceUrl": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/"
+    },
+    {
+      "finding": "Delivered a final April 16, 2024 patch transitioning onboard avionics into a long-term stationary surface weather and imagery testbed.",
+      "sourceTitle": "NASA Science — Ingenuity Final Transmission Update",
+      "sourceUrl": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/"
+    }
+  ],
+  "verification": "pending",
+  "verificationNote": "Atlas coordinates reflect the verified Mars 2020 Jezero Crater landing locus (18.4447° N, 77.4508° E); exact sub-degree coordinates of Ingenuity's final resting position at Airfield Chi (Valinor Hills) await PDS tabular confirmation.",
+  "sources": [
+    {
+      "title": "NASA Science — Ingenuity Mars Helicopter",
+      "url": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/",
+      "accessedDate": "2026-11-14"
+    },
+    {
+      "title": "NASA NSSDCA Master Catalog — Mars 2020 (2020-052A)",
+      "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=2020-052A",
+      "accessedDate": "2026-11-14"
+    }
+  ],
+  "image": {
+    "file": "../../assets/artifacts/ingenuity.svg",
+    "alt": "Monochrome technical schematic of the NASA Ingenuity Mars Helicopter depicting its top solar panel, counter-rotating 1.2-meter coaxial rotors, avionics box, and four carbon-fiber landing legs.",
+    "credit": "Archival technical schematic based on NASA / JPL-Caltech Ingenuity engineering documentation",
+    "originalUrl": "https://science.nasa.gov/mission/mars-2020-perseverance/ingenuity-mars-helicopter/"
+  },
+  "featured": false
+}

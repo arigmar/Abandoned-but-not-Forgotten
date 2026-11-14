@@ -1,0 +1,116 @@
+---
+import { ARTIFACT_TYPE_LABELS, type Artifact } from '../lib/archive';
+import { formatSilenceAccessible, formatSilenceCompact } from '../lib/silence';
+
+interface Props {
+  artifact: Artifact;
+  baseDate: string;
+}
+
+const { artifact, baseDate } = Astro.props;
+const baseMs = Date.parse(baseDate);
+const compactSilence = formatSilenceCompact(artifact.lastContactDate, baseMs);
+const accessibleSilence = formatSilenceAccessible(artifact.lastContactDate, baseMs);
+const typeLabel = ARTIFACT_TYPE_LABELS[artifact.type];
+---
+
+<article
+  data-artifact-card={artifact.id}
+  data-body={artifact.body}
+  data-type={artifact.type}
+  data-featured={artifact.featured ? 'true' : 'false'}
+  data-lens-hit="false"
+  class:list={[
+    'artifact-card relative flex flex-col justify-between border border-[var(--color-border)] bg-[var(--color-slate)] p-5 transition-colors',
+    artifact.featured && 'md:col-span-2',
+  ]}
+>
+  <div>
+    <!-- Top Status Row -->
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="border border-[var(--color-border-strong)] bg-[var(--color-void)] px-2 py-0.5 font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-text-primary)] uppercase">
+          {artifact.body}
+        </span>
+        <span class="font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase">
+          {typeLabel} · {artifact.nssdcId}
+        </span>
+      </div>
+
+      {
+        artifact.verification === 'verified' ? (
+          <span class="inline-flex items-center gap-1.5 border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2 py-0.5 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-turquoise)] uppercase">
+            <span class="h-1.5 w-1.5 bg-[var(--color-turquoise)]" aria-hidden="true" />
+            VERIFIED
+          </span>
+        ) : (
+          <span class="inline-flex items-center gap-1.5 border border-[var(--color-alert-border)] bg-[var(--color-alert-dim)] px-2 py-0.5 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-text-primary)] uppercase">
+            <svg
+              viewBox="0 0 16 16"
+              class="h-3.5 w-3.5 text-[var(--color-alert)]"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M8 1.5L15 14H1L8 1.5ZM7.25 6V10H8.75V6H7.25ZM7.25 11.25V12.75H8.75V11.25H7.25Z" />
+            </svg>
+            DATA TO VERIFY
+          </span>
+        )
+      }
+    </div>
+
+    <!-- Spacecraft Title & Agency -->
+    <div class="mt-4">
+      <h3 class="font-serif-display text-3xl leading-tight tracking-tight text-[var(--color-text-primary)]">
+        {artifact.name}
+      </h3>
+      <p class="mt-0.5 font-mono-telemetry text-[11px] tracking-[0.08em] text-[var(--color-text-secondary)]">
+        {artifact.agency} · {artifact.site.name}
+      </p>
+    </div>
+
+    <!-- Silence Counter (static accessible text + live mono display) -->
+    <div class="mt-4 border-y border-[var(--color-border)] bg-[var(--color-void)] px-3 py-2">
+      <p
+        data-card-silence={artifact.id}
+        data-last-contact={artifact.lastContactDate}
+        aria-hidden="true"
+        class="font-mono-telemetry text-[11px] tracking-[0.06em] text-[var(--color-turquoise)]"
+      >
+        LAST CONTACT · {artifact.lastContactDate} UTC · SILENT FOR {compactSilence}
+      </p>
+      <p class="sr-only">{accessibleSilence}</p>
+    </div>
+
+    <!-- One-line / concise scientific value (always legible without hover/lens) -->
+    <p class="mt-3 line-clamp-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+      {artifact.scientificValue}
+    </p>
+  </div>
+
+  <!-- Card Footer Action -->
+  <div class="mt-5 flex items-center justify-between gap-3 pt-1">
+    <span class="font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase">
+      {artifact.launchDate.slice(0, 4)}–{artifact.lastContactDate.slice(0, 4)} UTC
+    </span>
+    <button
+      type="button"
+      data-open-plaque={artifact.id}
+      class="border border-[var(--color-turquoise-border)] bg-[var(--color-void)] px-3.5 py-2 font-mono-telemetry text-[11px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase transition-colors hover:bg-[var(--color-turquoise-dim)]"
+    >
+      Open plaque -&gt;
+    </button>
+  </div>
+</article>
+
+<style>
+  .artifact-card[data-lens-hit='true'] {
+    border-color: var(--color-turquoise-border);
+    background-color: var(--color-slate-raised);
+  }
+
+  .artifact-card:hover,
+  .artifact-card:focus-within {
+    border-color: var(--color-turquoise-border);
+  }
+</style>

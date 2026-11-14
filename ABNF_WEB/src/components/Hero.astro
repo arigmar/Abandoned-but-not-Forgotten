@@ -1,0 +1,309 @@
+---
+import { SITE } from '../config/site';
+import type { Artifact } from '../lib/archive';
+import { computeCombinedSilence, formatSilenceCompact } from '../lib/silence';
+
+interface Props {
+  artifacts: Artifact[];
+}
+
+const { artifacts } = Astro.props;
+const baseMs = Date.parse(SITE.baseDate);
+const initialCombined = computeCombinedSilence(
+  artifacts.map((a) => a.lastContactDate),
+  baseMs,
+);
+
+// Map each artifact's coordinates onto polar radar coordinates (angle + radial band)
+const radarNodes = artifacts.map((artifact, index) => {
+  const lat = artifact.site.lat === 'pending' ? 0 : artifact.site.lat;
+  const lon = artifact.site.lon === 'pending' ? index * 60 - 150 : artifact.site.lon;
+  const angleDeg = ((lon + 180) % 360 + 360) % 360;
+  const radius = Math.min(182, Math.max(54, 82 + Math.abs(lat) * 2.4 + (index % 3) * 22));
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  const cx = Number((220 + Math.cos(rad) * radius).toFixed(2));
+  const cy = Number((220 + Math.sin(rad) * radius).toFixed(2));
+
+  return {
+    id: artifact.id,
+    name: artifact.name,
+    body: artifact.body.toUpperCase(),
+    lastContactDate: artifact.lastContactDate,
+    initialSilence: formatSilenceCompact(artifact.lastContactDate, baseMs),
+    angleDeg: Math.round(angleDeg),
+    cx,
+    cy,
+  };
+});
+
+const defaultLead = radarNodes[0];
+const initialCaption = defaultLead
+  ? `PINGING · ${defaultLead.name.toUpperCase()} · ${defaultLead.body} · SILENT ${defaultLead.initialSilence}`
+  : 'SCANNING · DEEP SPACE REGISTRY STANDBY';
+
+const datesJson = JSON.stringify(artifacts.map((a) => a.lastContactDate));
+const radarNodesJson = JSON.stringify(radarNodes);
+---
+
+<section
+  id="signal"
+  class="relative flex min-h-screen items-center overflow-hidden border-b border-[var(--color-border)] bg-reticle-grid pt-24 pb-14 sm:pt-20 sm:pb-16"
+>
+  <!-- Background Radar Graticule -->
+  <div
+    class="pointer-events-none absolute inset-0 flex items-center justify-end opacity-55 lg:opacity-80"
+    aria-hidden="true"
+  >
+    <div class="relative mr-[-4rem] h-[24rem] w-[24rem] sm:mr-4 sm:h-[32rem] sm:w-[32rem] lg:mr-10 lg:h-[38rem] lg:w-[38rem]">
+      <svg
+        viewBox="0 0 440 440"
+        class="h-full w-full"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <radialGradient id="hero-radar-sector" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#2EC4B6" stop-opacity="0.16" />
+            <stop offset="75%" stop-color="#2EC4B6" stop-opacity="0.06" />
+            <stop offset="100%" stop-color="#2EC4B6" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+
+        <!-- Concentric range rings -->
+        <circle cx="220" cy="220" r="55" stroke="#7A89A6" stroke-opacity="0.22" stroke-dasharray="3 4" />
+        <circle cx="220" cy="220" r="105" stroke="#7A89A6" stroke-opacity="0.24" />
+        <circle cx="220" cy="220" r="155" stroke="#7A89A6" stroke-opacity="0.24" stroke-dasharray="2 5" />
+        <circle cx="220" cy="220" r="202" stroke="#7A89A6" stroke-opacity="0.34" />
+
+        <!-- Crosshairs & 45-degree radials -->
+        <line x1="12" y1="220" x2="428" y2="220" stroke="#7A89A6" stroke-opacity="0.22" />
+        <line x1="220" y1="12" x2="220" y2="428" stroke="#7A89A6" stroke-opacity="0.22" />
+        <line x1="76" y1="76" x2="364" y2="364" stroke="#7A89A6" stroke-opacity="0.14" stroke-dasharray="3 5" />
+        <line x1="364" y1="76" x2="76" y2="364" stroke="#7A89A6" stroke-opacity="0.14" stroke-dasharray="3 5" />
+
+        <!-- Cardinal degree markers -->
+        <text x="224" y="28" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="9">000°</text>
+        <text x="394" y="216" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="9">090°</text>
+        <text x="224" y="416" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="9">180°</text>
+        <text x="16" y="216" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="9">270°</text>
+
+        <!-- Sweeping sector arm -->
+        <g id="hero-radar-sweep" class="radar-sweep-arm">
+          <path
+            d="M220 220 L220 18 A202 202 0 0 1 312 40 Z"
+            fill="url(#hero-radar-sector)"
+          />
+          <line x1="220" y1="220" x2="220" y2="18" stroke="#2EC4B6" stroke-opacity="0.7" stroke-width="1.5" />
+        </g>
+
+        <!-- Landing-site dots mapped from catalog -->
+        {
+          radarNodes.map((node) => (
+            <g data-radar-node={node.id} data-angle={node.angleDeg}>
+              <circle
+                cx={node.cx}
+                cy={node.cy}
+                r="11"
+                stroke="#2EC4B6"
+                stroke-opacity="0"
+                stroke-width="1"
+                class="radar-ping-halo"
+              />
+              <circle
+                cx={node.cx}
+                cy={node.cy}
+                r="3.5"
+                fill="#7A89A6"
+                class="radar-ping-core"
+              />
+            </g>
+          ))
+        }
+      </svg>
+    </div>
+  </div>
+
+  <!-- Foreground Content -->
+  <div class="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6">
+    <div class="max-w-3xl">
+      <div class="mb-5 inline-flex items-center gap-2 border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3 py-1 font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-text-secondary)]">
+        <span class="h-2 w-2 bg-[var(--color-turquoise)]" aria-hidden="true"></span>
+        <span>SECTION 01 / 05 · ACTIVE TELEMETRY REGISTRY</span>
+      </div>
+
+      <h1 class="font-serif-display text-5xl leading-[0.98] tracking-tight text-[var(--color-text-primary)] sm:text-6xl lg:text-[4.75rem]">
+        {SITE.tagline}
+      </h1>
+
+      <p class="mt-5 max-w-2xl text-base leading-relaxed text-[var(--color-text-secondary)] sm:text-lg">
+        {SITE.premise}
+      </p>
+
+      <!-- Live Registry Silence Clock -->
+      <div class="mt-8 border border-[var(--color-border-strong)] bg-[color:rgba(19,27,46,0.9)] p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5">
+          <span class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+            Live Registry Silence · {artifacts.length} Cataloged Instruments (Mars &amp; Moon)
+          </span>
+          <span class="font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-turquoise)]">
+            CUMULATIVE UTC
+          </span>
+        </div>
+
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+          <p
+            id="hero-silence-clock"
+            aria-hidden="true"
+            class="font-mono-telemetry text-2xl font-bold tracking-[0.06em] text-[var(--color-text-primary)] sm:text-3xl lg:text-4xl"
+          >
+            {initialCombined.formattedMono}
+          </p>
+          <p id="hero-silence-sr" class="sr-only">
+            {initialCombined.formattedAccessible}
+          </p>
+          <p
+            id="hero-radar-caption"
+            class="font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-turquoise)]"
+          >
+            {initialCaption}
+          </p>
+        </div>
+      </div>
+
+      <!-- Primary & Secondary CTAs -->
+      <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <a
+          href="#simulator"
+          class="inline-flex items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-5 py-3 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
+        >
+          <span>04 // Enter Field Simulator</span>
+          <span aria-hidden="true">-&gt;</span>
+        </a>
+
+        <a
+          href="#archive"
+          class="inline-flex items-center justify-center gap-2 border border-[var(--color-turquoise)] bg-[color:rgba(19,27,46,0.75)] px-5 py-3 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-turquoise)] uppercase transition-colors hover:bg-[var(--color-turquoise-dim)]"
+        >
+          <span>03 // Inspect Surface Archive</span>
+          <span aria-hidden="true">-&gt;</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden data bridge for Hero clock + radar pings -->
+  <script
+    type="application/json"
+    id="hero-radar-data"
+    set:html={JSON.stringify({ dates: JSON.parse(datesJson), nodes: JSON.parse(radarNodesJson) })}
+  />
+</section>
+
+<style>
+  [data-radar-node] .radar-ping-core {
+    transition: fill 260ms ease, r 260ms ease;
+  }
+  [data-radar-node] .radar-ping-halo {
+    transition: stroke-opacity 320ms ease;
+  }
+  [data-radar-node][data-ping='active'] .radar-ping-core {
+    fill: var(--color-turquoise);
+  }
+  [data-radar-node][data-ping='active'] .radar-ping-halo {
+    stroke-opacity: 0.85;
+  }
+</style>
+
+<script>
+  import {
+    computeCombinedSilence,
+    formatSilenceCompact,
+    subscribeMissionClock,
+  } from '../lib/silence';
+
+  interface RadarNodeMeta {
+    id: string;
+    name: string;
+    body: string;
+    lastContactDate: string;
+    angleDeg: number;
+  }
+
+  const payloadEl = document.getElementById('hero-radar-data');
+  const clockEl = document.getElementById('hero-silence-clock');
+  const srEl = document.getElementById('hero-silence-sr');
+  const captionEl = document.getElementById('hero-radar-caption');
+
+  if (payloadEl) {
+    const parsed = JSON.parse(payloadEl.textContent || '{}') as {
+      dates?: string[];
+      nodes?: RadarNodeMeta[];
+    };
+    const dates = parsed.dates ?? [];
+    const nodes = parsed.nodes ?? [];
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let lastSrKey = '';
+
+    const updateHeroClock = (nowMs: number) => {
+      const combined = computeCombinedSilence(dates, nowMs);
+      if (clockEl) clockEl.textContent = combined.formattedMono;
+      const srKey = `${combined.years}:${combined.days}:${combined.hours}`;
+      if (srEl && srKey !== lastSrKey) {
+        lastSrKey = srKey;
+        srEl.textContent = combined.formattedAccessible;
+      }
+    };
+
+    updateHeroClock(Date.now());
+    subscribeMissionClock(updateHeroClock);
+
+    // Sync radar dot pings to the 16-second sweep angle when motion is allowed
+    if (!reducedMotion && nodes.length > 0) {
+      const nodeEls = new Map<string, SVGGElement>();
+      for (const el of document.querySelectorAll<SVGGElement>('[data-radar-node]')) {
+        if (el.dataset.radarNode) nodeEls.set(el.dataset.radarNode, el);
+      }
+
+      const startTime = performance.now();
+      const sweepDurationMs = 16000;
+      let lastPingedId = '';
+
+      const stepSweep = () => {
+        if (!document.hidden) {
+          const elapsed = (performance.now() - startTime) % sweepDurationMs;
+          const sweepAngle = (elapsed / sweepDurationMs) * 360;
+
+          let closestNode: RadarNodeMeta | null = null;
+          let closestDiff = 999;
+
+          for (const node of nodes) {
+            const rawDiff = Math.abs(sweepAngle - node.angleDeg);
+            const angularDiff = Math.min(rawDiff, 360 - rawDiff);
+            const el = nodeEls.get(node.id);
+            const isNear = angularDiff < 18;
+            if (el) {
+              el.dataset.ping = isNear ? 'active' : 'rest';
+            }
+            if (isNear && angularDiff < closestDiff) {
+              closestDiff = angularDiff;
+              closestNode = node;
+            }
+          }
+
+          if (closestNode && closestNode.id !== lastPingedId && captionEl) {
+            lastPingedId = closestNode.id;
+            const silence = formatSilenceCompact(closestNode.lastContactDate, Date.now());
+            captionEl.textContent = `PINGING · ${closestNode.name.toUpperCase()} · ${closestNode.body} · SILENT ${silence}`;
+          }
+        }
+        window.requestAnimationFrame(stepSweep);
+      };
+
+      window.requestAnimationFrame(stepSweep);
+    } else if (reducedMotion) {
+      for (const el of document.querySelectorAll<SVGGElement>('[data-radar-node]')) {
+        el.dataset.ping = 'active';
+      }
+    }
+  }
+</script>

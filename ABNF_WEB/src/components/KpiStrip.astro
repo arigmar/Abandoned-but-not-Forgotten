@@ -1,0 +1,85 @@
+---
+import type { ArchiveSnapshot } from '../lib/archive';
+
+interface Props {
+  snapshot: ArchiveSnapshot;
+}
+
+const { snapshot } = Astro.props;
+---
+
+<div
+  id="kpi-strip"
+  class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+  aria-label="Archive telemetry summary"
+>
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Artifacts Cataloged
+    </p>
+    <p class="mt-2 font-mono-telemetry text-2xl font-bold text-[var(--color-text-primary)]">
+      <span data-kpi="count">{snapshot.totalCount}</span>
+      <span class="text-sm font-normal text-[var(--color-text-secondary)]">
+        / {snapshot.totalCount}
+      </span>
+    </p>
+    <p
+      data-kpi="verified-summary"
+      class="mt-1 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]"
+    >
+      {snapshot.verifiedCount} VERIFIED · {snapshot.pendingCount} TO VERIFY
+    </p>
+  </div>
+
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Planetary Split
+    </p>
+    <p
+      data-kpi="body-split"
+      class="mt-2 font-mono-telemetry text-2xl font-bold text-[var(--color-text-primary)]"
+    >
+      MARS {snapshot.marsCount} / MOON {snapshot.moonCount}
+    </p>
+    <p class="mt-1 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
+      SURFACE HARDWARE REGISTRY
+    </p>
+  </div>
+
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Combined Silence
+    </p>
+    <p
+      data-kpi="combined-silence"
+      aria-hidden="true"
+      class="mt-2 font-mono-telemetry text-lg font-bold tracking-[0.04em] text-[var(--color-turquoise)] sm:text-xl"
+    >
+      {snapshot.combinedSilenceMono}
+    </p>
+    <p data-kpi="combined-silence-sr" class="sr-only">
+      {snapshot.combinedSilenceAccessible}
+    </p>
+    <p class="mt-1 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
+      CUMULATIVE NON-TRANSMISSION
+    </p>
+  </div>
+
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Most Recent Last Contact
+    </p>
+    <p
+      data-kpi="latest-date"
+      class="mt-2 font-mono-telemetry text-2xl font-bold text-[var(--color-text-primary)]"
+    >
+      {snapshot.mostRecentContact ? `${snapshot.mostRecentContact.lastContactDate}` : 'NONE'}
+    </p>
+    <p
+      data-kpi="latest-name"
+      class="mt-1 truncate font-mono-telemetry text-[11px] text-[var(--color-turquoise)]"
+    >
+      {snapshot.mostRecentContact ? `${snapshot.mostRecentContact.name.toUpperCase()} · UTC` : 'NO MATCHING SIGNAL'}
+    </p>
+  </div>
+</div>

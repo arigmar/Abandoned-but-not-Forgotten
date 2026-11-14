@@ -38,3 +38,6 @@ playwright-report/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local hackathon notes & internal docs (excluded from commits/push)
+/docs/
