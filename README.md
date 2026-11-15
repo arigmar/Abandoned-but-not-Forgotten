@@ -30,10 +30,6 @@ Since the 1960s, NASA has left hardware across the solar system. School-age spac
 
 **Scientific Monuments Archive** is a telemetry registry and museum archive of inactive rovers, landers and surface stations across Mars and the Moon, honoring their scientific legacy after final contact.
 
-## Demo Video
-
-<!-- Replace this line with the demo video (see "Adding the demo video" in the team notes) -->
-*Coming soon.*
 
 ## Screenshots
 
@@ -165,20 +161,38 @@ Every spacecraft record cites official NASA sources:
 
 ### 3D Models
 
-All models are from [Sketchfab](https://sketchfab.com/) under the [Creative Commons Attribution 4.0 (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license.
+From [Sketchfab](https://sketchfab.com/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Models were adapted for real-time rendering (scale, rotation and materials).
 
-| File | Model | Author | Used in |
-|---|---|---|---|
-| `earth.glb` | [Earth \| Terra - Downloadable model](https://sketchfab.com/3d-models/earth-terra-downloadable-model-30fd7e9c4e6946ddb6fcae7a97b2b0d4) | [murilo.kleine](https://sketchfab.com/murilo.kleine) | Flight, Descent |
-| `Lune.glb` | [LUNE](https://sketchfab.com/3d-models/lune-ecf0a02b8151418689e78abec4f94b96) | [Stéphane Agullo](https://sketchfab.com/sa3d) | Flight |
-| `mars.glb` | [Mars](https://sketchfab.com/3d-models/mars-5fc8b7168b044527a05ed3903c998b65) | [AirStudios](https://sketchfab.com/sebbe613) | Flight |
-| `perseverance_rover_on_mars.glb` | [Perseverance rover on Mars](https://sketchfab.com/3d-models/perseverance-rover-on-mars-fc11b1c7457b4d07ad7a0825911e2847) | [Ignazio Pillitteri](https://sketchfab.com/gnaz) | Descent |
-| `spaceship.glb` | [SpaceShip](https://sketchfab.com/3d-models/spaceship-6164a883f57f4f13938c3c5999bc0e1f) | [JazOone](https://sketchfab.com/JazOone) | Flight, Descent |
-| `sun.glb` | [Sun](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645) | [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski) | *Flight* |
+| File | Model | Author |
+|---|---|---|
+| `earth.glb` | [Earth \| Terra - Downloadable model](https://sketchfab.com/3d-models/earth-terra-downloadable-model-30fd7e9c4e6946ddb6fcae7a97b2b0d4) | [murilo.kleine](https://sketchfab.com/murilo.kleine) |
+| `Lune.glb` | [LUNE](https://sketchfab.com/3d-models/lune-ecf0a02b8151418689e78abec4f94b96) | [Stéphane Agullo](https://sketchfab.com/sa3d) |
+| `mars.glb` | [Mars](https://sketchfab.com/3d-models/mars-5fc8b7168b044527a05ed3903c998b65) | [AirStudios](https://sketchfab.com/sebbe613) |
+| `sun.glb` | [Sun](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645) | [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski) |
+| `perseverance_rover_on_mars.glb` | [Perseverance rover on Mars](https://sketchfab.com/3d-models/perseverance-rover-on-mars-fc11b1c7457b4d07ad7a0825911e2847) | [Ignazio Pillitteri](https://sketchfab.com/gnaz) |
+| `spaceship.glb` | [SpaceShip](https://sketchfab.com/3d-models/spaceship-6164a883f57f4f13938c3c5999bc0e1f) | [JazOone](https://sketchfab.com/JazOone) |
+
+### Postcards from Silence (TurboWarp game)
+
+- Packaged with [TurboWarp Packager](https://packager.turbowarp.org/) (© 2021–2024 Thomas Weber, MPL-2.0), running on the Scratch VM (© 2016 Massachusetts Institute of Technology, BSD 3-Clause).
+- Sound effects (*Space Ambience*, *Laser2*, *Magic Spell*) from the Scratch sound library.
+- Illustrations (drone, backgrounds, postcards and UI) were created by the team using AI image generation.
+
+### Libraries & Fonts
+
+- [Three.js](https://threejs.org/), [Astro](https://astro.build/) and [Tailwind CSS](https://tailwindcss.com/): MIT
+- [Draco 3D decoder](https://google.github.io/draco/) (loaded from Google's CDN): Apache-2.0
+- Hanken Grotesk, Instrument Serif and JetBrains Mono via [Fontsource](https://fontsource.org/): SIL Open Font License 1.1
+
+### Original Work
+
+Created by the team: the procedural 3D spacecraft monuments and planetary textures (Three.js), the synthesized archive sounds (Web Audio API) and the monochrome SVG schematics. None of them use NASA logos or insignia.
+
+Independent NASA Space Apps Challenge entry; not affiliated with or endorsed by NASA.
 
 ## License
 
-The source code is released under the [Apache License 2.0](LICENSE). Third-party assets (3D models, libraries and NASA data) remain under their own licenses, listed above.
+The source code is released under the [Apache License 2.0](LICENSE). Third-party assets (3D models, game runtime, sounds, libraries, fonts and NASA data) remain under their own licenses, listed above.
 
 ---
 
