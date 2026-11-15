@@ -9,6 +9,9 @@ export interface InputCallbacks {
   onSelectHotspotIndex: (index: number) => void;
   onHoldStart: () => void;
   onHoldEnd: () => void;
+  onRetry?: () => void;
+  onLaunchOrbit?: () => void;
+  onDiagnosticTest?: () => void;
 }
 
 export interface ExpeditionInput {
@@ -16,6 +19,7 @@ export interface ExpeditionInput {
   readonly steer: number;
   readonly inspectRotate: number;
   readonly inspectZoom: number;
+  isKeyDown: (code: string) => boolean;
   consumeOrbitDelta: () => { yaw: number; pitch: number };
   consumeWheelZoom: () => number;
   isHoldingInteractKey: () => boolean;
@@ -96,6 +100,12 @@ export function createExpeditionInput(
       callbacks.onHoldStart();
     } else if (code === 'KeyG') {
       callbacks.onAutoApproach();
+    } else if (code === 'KeyR') {
+      callbacks.onRetry?.();
+    } else if (code === 'KeyL') {
+      callbacks.onLaunchOrbit?.();
+    } else if (code === 'KeyF') {
+      callbacks.onDiagnosticTest?.();
     } else if (code === 'BracketLeft') {
       callbacks.onPrevHotspot();
     } else if (code === 'BracketRight') {
@@ -258,6 +268,9 @@ export function createExpeditionInput(
         (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) -
         (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0);
       return k || -joyY;
+    },
+    isKeyDown(code: string) {
+      return keys.has(code);
     },
     consumeOrbitDelta() {
       const delta = { yaw: orbitYaw, pitch: orbitPitch };

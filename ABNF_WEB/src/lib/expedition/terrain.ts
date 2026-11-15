@@ -18,6 +18,7 @@ import {
   PointsMaterial,
 } from 'three';
 import type { BodyEnvironmentPalette, TokenPalette } from './palette';
+import { createPlanetaryRegolithTexture } from './textures';
 import { clampNumber, createPrng, hashStringSeed } from './utils';
 
 export interface CraterSpec {
@@ -55,28 +56,46 @@ export interface SurveyRoverRig {
   mastBeacon: Mesh;
 }
 
-export const ROVER_SPAWN_X = 10;
-export const ROVER_SPAWN_Z = 86;
+export const ROVER_SCALE = 0.28;
+export const ROVER_WHEEL_RADIUS = 0.29 * ROVER_SCALE;
+export const ROVER_SPAWN_X = 0;
+export const ROVER_SPAWN_Z = 62;
+
+export interface SurfaceZonePoint {
+  x: number;
+  z: number;
+}
 
 export function buildSurfaceTerrain(
   artifactId: string,
   body: 'mars' | 'moon',
   env: BodyEnvironmentPalette,
   reducedMotion: boolean,
+  monumentSites: SurfaceZonePoint[] = [{ x: 0, z: 0 }],
+  shipPad: SurfaceZonePoint = { x: -11, z: 54 },
+  roverSpawn: SurfaceZonePoint = { x: ROVER_SPAWN_X, z: ROVER_SPAWN_Z },
 ): SurfaceTerrainData {
   const rand = createPrng(hashStringSeed(artifactId));
   const root = new Group();
   root.name = 'surface-terrain';
 
+  const isNearExclusion = (px: number, pz: number, monClear: number, padClear: number): boolean => {
+    if (Math.hypot(px - roverSpawn.x, pz - roverSpawn.z) < padClear) return true;
+    if (Math.hypot(px - shipPad.x, pz - shipPad.z) < padClear + 2) return true;
+    for (const site of monumentSites) {
+      if (Math.hypot(px - site.x, pz - site.z) < monClear) return true;
+    }
+    return false;
+  };
+
   const craters: CraterSpec[] = [];
-  const craterCount = body === 'moon' ? 28 : 18;
+  const craterCount = body === 'moon' ? 38 : 24;
   for (let i = 0; i < craterCount; i++) {
     const angle = rand() * Math.PI * 2;
-    const dist = 16 + rand() * 88;
+    const dist = 10 + rand() * 124;
     const cx = Math.cos(angle) * dist;
     const cz = Math.sin(angle) * dist;
-    // Keep craters gently clear of rover initial landing pad
-    if (Math.hypot(cx - ROVER_SPAWN_X, cz - ROVER_SPAWN_Z) < 10) continue;
+    if (isNearExclusion(cx, cz, 12.5, 11)) continue;
     craters.push({
       x: cx,
       z: cz,
@@ -96,6 +115,16 @@ export function buildSurfaceTerrain(
 
     let h = ridge;
 
+    // Distant perimeter crater-basin ridge elevation for natural horizon hills
+    const radialDist = Math.hypot(x, z);
+    if (radialDist > 118) {
+      const outerT = clampNumber((radialDist - 118) / 36, 0, 1);
+      h +=
+        outerT *
+        outerT *
+        (4.8 + Math.sin(Math.atan2(z, x) * 5 + phaseA) * 2.1 + Math.cos(radialDist * 0.15) * 1.1);
+    }
+
     for (const c of craters) {
       const d = Math.hypot(x - c.x, z - c.z);
       if (d > c.radius * 1.35) continue;
@@ -109,18 +138,23 @@ export function buildSurfaceTerrain(
       }
     }
 
-    // Smoothly flatten monument pad at (0, 0) and rover spawn pad
-    const monumentDist = Math.hypot(x, z);
-    const monumentBlend = clampNumber((monumentDist - 9.5) / 7.5, 0, 1);
-    const spawnDist = Math.hypot(x - ROVER_SPAWN_X, z - ROVER_SPAWN_Z);
-    const spawnBlend = clampNumber((spawnDist - 5.5) / 6.0, 0, 1);
+    // Smoothly flatten every monument pad, landed spacecraft apron, and rover spawn pad
+    let padBlend = 1;
+    for (const site of monumentSites) {
+      const d = Math.hypot(x - site.x, z - site.z);
+      padBlend *= clampNumber((d - 7.5) / 6.5, 0, 1);
+    }
+    const shipDist = Math.hypot(x - shipPad.x, z - shipPad.z);
+    const shipBlend = clampNumber((shipDist - 8.5) / 6.5, 0, 1);
+    const spawnDist = Math.hypot(x - roverSpawn.x, z - roverSpawn.z);
+    const spawnBlend = clampNumber((spawnDist - 4.5) / 5.5, 0, 1);
 
-    return h * monumentBlend * spawnBlend;
+    return h * padBlend * shipBlend * spawnBlend;
   };
 
-  // Terrain mesh
-  const size = 240;
-  const segments = 84;
+  // Terrain mesh (covers all planetary zones comfortably with high-res relief & texture)
+  const size = 300;
+  const segments = 128;
   const terrainGeom = new PlaneGeometry(size, size, segments, segments);
   terrainGeom.rotateX(-Math.PI / 2);
 
@@ -134,8 +168,14 @@ export function buildSurfaceTerrain(
     const py = getHeight(px, pz);
     posAttr.setY(i, py);
 
-    const elevT = clampNumber((py + 1.8) / 4.2, 0, 1);
-    cTmp.copy(env.terrainLow).lerp(env.terrainHigh, elevT);
+    const elevT = clampNumber((py + 1.8) / 4.8, 0, 1);
+    // Keep vertex tint balanced (0.76..0.96) so procedural regolith map + bump relief stay vivid
+    const shade = 0.76 + elevT * 0.2;
+    if (body === 'mars') {
+      cTmp.setRGB(shade, shade * 0.92, shade * 0.86);
+    } else {
+      cTmp.setRGB(shade * 0.93, shade * 0.95, shade);
+    }
     colors[i * 3] = cTmp.r;
     colors[i * 3 + 1] = cTmp.g;
     colors[i * 3 + 2] = cTmp.b;
@@ -144,38 +184,45 @@ export function buildSurfaceTerrain(
   terrainGeom.setAttribute('color', new Float32BufferAttribute(colors, 3));
   terrainGeom.computeVertexNormals();
 
+  const regolithTex = createPlanetaryRegolithTexture(body, 28);
   const terrainMat = new MeshStandardMaterial({
+    map: regolithTex ?? undefined,
+    bumpMap: regolithTex ?? undefined,
+    bumpScale: 0.18,
     vertexColors: true,
-    roughness: 0.94,
+    roughness: 0.92,
     metalness: 0.04,
-    flatShading: true,
+    flatShading: false,
   });
 
   const terrainMesh = new Mesh(terrainGeom, terrainMat);
   terrainMesh.receiveShadow = true;
   root.add(terrainMesh);
 
-  // Scattered low-poly rocks (InstancedMesh)
+  // Scattered textured boulders (InstancedMesh)
   const boulders: BoulderCollision[] = [];
-  const rockGeom = new DodecahedronGeometry(1, 0);
+  const rockGeom = new DodecahedronGeometry(1, 1);
   const rockMat = new MeshStandardMaterial({
-    color: env.rockColor,
+    color: body === 'mars' ? 0x9a5943 : 0x909aa8,
+    map: regolithTex ?? undefined,
+    bumpMap: regolithTex ?? undefined,
+    bumpScale: 0.1,
     roughness: 0.92,
     metalness: 0.05,
-    flatShading: true,
+    flatShading: false,
   });
 
-  const candidateCount = 72;
+  const candidateCount = 110;
   const matrices: Matrix4[] = [];
   const dummy = new Object3D();
 
   for (let i = 0; i < candidateCount; i++) {
     const angle = rand() * Math.PI * 2;
-    const dist = 14 + rand() * 92;
+    const dist = 10 + rand() * 124;
     const bx = Math.cos(angle) * dist;
     const bz = Math.sin(angle) * dist;
 
-    if (Math.hypot(bx - ROVER_SPAWN_X, bz - ROVER_SPAWN_Z) < 8) continue;
+    if (isNearExclusion(bx, bz, 9.5, 7.5)) continue;
 
     const scaleXZ = 0.45 + rand() * 1.15;
     const scaleY = scaleXZ * (0.55 + rand() * 0.45);
@@ -187,7 +234,7 @@ export function buildSurfaceTerrain(
     dummy.updateMatrix();
     matrices.push(dummy.matrix.clone());
 
-    boulders.push({ x: bx, z: bz, radius: scaleXZ + 0.95 });
+    boulders.push({ x: bx, z: bz, radius: scaleXZ + 0.45 });
   }
 
   if (matrices.length > 0) {
@@ -200,9 +247,9 @@ export function buildSurfaceTerrain(
     rockMat.dispose();
   }
 
-  // Wheel tracks ring buffer (paired left/right regolith prints)
-  const maxTrackMarks = 160;
-  const trackGeom = new BoxGeometry(0.32, 0.04, 0.55);
+  // Wheel tracks ring buffer (paired left/right regolith prints sized to compact rover)
+  const maxTrackMarks = 220;
+  const trackGeom = new BoxGeometry(0.11, 0.025, 0.22);
   const trackMat = new MeshBasicMaterial({
     color: env.terrainLow.clone().multiplyScalar(0.75),
   });
@@ -215,8 +262,8 @@ export function buildSurfaceTerrain(
   root.add(trackMesh);
 
   let trackCursor = 0;
-  let lastTrackX = ROVER_SPAWN_X;
-  let lastTrackZ = ROVER_SPAWN_Z;
+  let lastTrackX = roverSpawn.x;
+  let lastTrackZ = roverSpawn.z;
   const trackDummy = new Object3D();
 
   const stampWheelTracks = (
@@ -225,11 +272,11 @@ export function buildSurfaceTerrain(
     yaw: number,
     heightAt: (px: number, pz: number) => number,
   ): void => {
-    if (Math.hypot(x - lastTrackX, z - lastTrackZ) < 0.72) return;
+    if (Math.hypot(x - lastTrackX, z - lastTrackZ) < 0.28) return;
     lastTrackX = x;
     lastTrackZ = z;
 
-    const lateral = 0.84;
+    const lateral = 0.84 * ROVER_SCALE;
     const rightX = Math.cos(yaw) * lateral;
     const rightZ = -Math.sin(yaw) * lateral;
 
@@ -257,9 +304,9 @@ export function buildSurfaceTerrain(
   const dustPos = new Float32Array(dustCount * 3);
   const dustVel = new Float32Array(dustCount * 3);
   for (let i = 0; i < dustCount; i++) {
-    dustPos[i * 3] = (rand() - 0.5) * 45 + ROVER_SPAWN_X;
+    dustPos[i * 3] = (rand() - 0.5) * 45 + roverSpawn.x;
     dustPos[i * 3 + 1] = 0.4 + rand() * 4.5;
-    dustPos[i * 3 + 2] = (rand() - 0.5) * 45 + ROVER_SPAWN_Z;
+    dustPos[i * 3 + 2] = (rand() - 0.5) * 45 + roverSpawn.z;
     dustVel[i * 3] = (rand() - 0.5) * (body === 'mars' ? 0.9 : 0.15);
     dustVel[i * 3 + 1] = 0.05 + rand() * 0.25;
     dustVel[i * 3 + 2] = (rand() - 0.5) * (body === 'mars' ? 0.9 : 0.15);
@@ -310,7 +357,7 @@ export function buildSurfaceTerrain(
 
   return {
     root,
-    spawnPosition: { x: ROVER_SPAWN_X, z: ROVER_SPAWN_Z },
+    spawnPosition: { x: roverSpawn.x, z: roverSpawn.z },
     boulders,
     getHeight,
     stampWheelTracks,
@@ -321,6 +368,7 @@ export function buildSurfaceTerrain(
 export function buildSurveyRover(tokens: TokenPalette): SurveyRoverRig {
   const root = new Group();
   root.name = 'unbranded-survey-rover';
+  root.scale.setScalar(ROVER_SCALE);
 
   const chassisMat = new MeshStandardMaterial({
     color: tokens.roverChassis,

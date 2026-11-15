@@ -3,14 +3,15 @@ import { subscribeDiscoveryChange, subscribeReadingModeChange } from '../discove
 import { buildArtifactHotspots, createExpeditionHud } from './hud';
 import { createExpeditionInput } from './input';
 import { createTokenPalette } from './palette';
-import { createDescentScene } from './scenes/descent';
+import { createAscentScene, createDescentScene } from './scenes/descent';
 import { createSurfaceScene, type SurfaceSceneController } from './scenes/surface';
-import { createTransitScene, type SceneController } from './scenes/transit';
+import { createTransitScene, type SceneController, type TransitSceneOptions } from './scenes/transit';
 import type { ExpeditionController, ExpeditionLaunchOptions, ExpeditionPhase } from './types';
 
 export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionController {
   const {
     artifact,
+    planetArtifacts,
     canvas,
     hudRoot,
     stageEl,
@@ -18,9 +19,11 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
     standbyEl,
     liveRegionEl,
     initialMode,
+    initialPhase = 'transit',
     reducedMotion,
     onExit,
     onSelectAnother,
+    onCaptureOtherBody,
   } = options;
 
   let renderer: WebGLRenderer;
@@ -47,9 +50,9 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
   const tokens = createTokenPalette();
   const hotspots = buildArtifactHotspots(artifact);
 
-  const camera = new PerspectiveCamera(56, 16 / 9, 0.2, 320);
+  const camera = new PerspectiveCamera(56, 16 / 9, 0.2, 1200);
 
-  let phase: ExpeditionPhase = 'transit';
+  let phase: ExpeditionPhase = initialPhase;
   let paused = false;
   let destroyed = false;
   let rafId = 0;
@@ -57,10 +60,54 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
 
   let transitCtrl: SceneController | null = null;
   let descentCtrl: SceneController | null = null;
+  let ascentCtrl: SceneController | null = null;
   let surfaceCtrl: SurfaceSceneController | null = null;
 
   let transitYaw = 0;
   let transitPitch = 0;
+  let lastLandingState: 'flying' | 'landed' | 'offpad' | 'crashed' = 'flying';
+
+  const toggleAssistOrApproach = (): void => {
+    if (paused) return;
+    if (phase === 'transit' && transitCtrl?.toggleAutoPilot) {
+      const engaged = transitCtrl.toggleAutoPilot();
+      hud.setFlightAssistEngaged('transit', engaged);
+      hud.announce(engaged ? 'Auto-cruise engaged.' : 'Auto-cruise disengaged.');
+    } else if (phase === 'descent' && descentCtrl?.toggleAutoPilot) {
+      const engaged = descentCtrl.toggleAutoPilot();
+      hud.setFlightAssistEngaged('descent', engaged);
+      hud.announce(engaged ? 'Auto-land engaged.' : 'Manual descent control.');
+    } else if (surfaceCtrl) {
+      surfaceCtrl.toggleAutoApproach();
+    }
+  };
+
+  const selectNavTarget = (body: 'moon' | 'mars'): void => {
+    if (phase !== 'transit' || !transitCtrl?.setNavTarget) return;
+    transitCtrl.setNavTarget(body);
+    hud.setNavTargetBody(body);
+    hud.announce(`Navigation target locked: ${body === 'moon' ? 'Moon' : 'Mars'}.`);
+  };
+
+  const triggerRetryDescent = (): void => {
+    if (paused || phase !== 'descent' || !descentCtrl?.retry) return;
+    descentCtrl.retry();
+    lastLandingState = 'flying';
+    hud.setTouchdownState('flying');
+    hud.setDescentRetryVisible(false);
+    hud.setFlightAssistEngaged('descent', Boolean(descentCtrl.isAutoPilotEngaged?.()));
+    hud.announce('Retrying powered descent.');
+  };
+
+  const triggerLaunchOrbit = (): void => {
+    if (paused || destroyed || phase === 'transit' || phase === 'ascent') return;
+    enterPhase('ascent');
+  };
+
+  const triggerExploreSurface = (): void => {
+    if (paused || destroyed || phase !== 'descent') return;
+    enterPhase('drive');
+  };
 
   const hud = createExpeditionHud(
     artifact,
@@ -77,15 +124,26 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
       onRestart: () => restartMission(),
       onAbortToSelector: () => onSelectAnother(),
       onPulse: () => surfaceCtrl?.triggerSonarPulse(),
-      onAutoApproach: () => surfaceCtrl?.toggleAutoApproach(),
+      onAutoApproach: () => toggleAssistOrApproach(),
       onPrevHotspot: () => surfaceCtrl?.stepHotspot(-1),
       onNextHotspot: () => surfaceCtrl?.stepHotspot(1),
       onScanActive: () => surfaceCtrl?.interactInInspect(),
       onReturnDrive: () => surfaceCtrl?.returnToDriveMode(),
-      onSelectHotspot: (idx) => surfaceCtrl?.selectHotspot(idx),
+      onSelectHotspot: (idx) => surfaceCtrl?.selectHotspot(idx, false),
+      onDiagnosticTest: () => surfaceCtrl?.triggerDiagnosticTest(),
+      onSimModeChange: (nominal) => surfaceCtrl?.setSimMode(nominal),
       onRecoverComplete: () => {
         phase = 'complete';
         surfaceCtrl?.markRecovered();
+      },
+      onSelectNavTarget: (body) => selectNavTarget(body),
+      onFlightAssist: () => toggleAssistOrApproach(),
+      onRetryDescent: () => triggerRetryDescent(),
+      onLaunchOrbit: () => triggerLaunchOrbit(),
+      onExploreSurface: () => triggerExploreSurface(),
+      onContinueSurface: () => {
+        phase = 'drive';
+        surfaceCtrl?.continueExploring();
       },
     },
   );
@@ -96,14 +154,30 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
   const input = createExpeditionInput(canvas, joystickEl, joystickThumbEl, {
     onSkip: () => skipCurrentSequence(),
     onPulse: () => surfaceCtrl?.triggerSonarPulse(),
-    onInteract: () => surfaceCtrl?.interactInInspect(),
-    onAutoApproach: () => surfaceCtrl?.toggleAutoApproach(),
+    onInteract: () => {
+      if (phase === 'descent' && descentCtrl?.getLandingState?.() !== 'flying') {
+        triggerExploreSurface();
+        return;
+      }
+      surfaceCtrl?.interactInInspect();
+    },
+    onAutoApproach: () => toggleAssistOrApproach(),
     onPauseToggle: () => setPaused(!paused),
     onPrevHotspot: () => surfaceCtrl?.stepHotspot(-1),
     onNextHotspot: () => surfaceCtrl?.stepHotspot(1),
-    onSelectHotspotIndex: (idx) => surfaceCtrl?.selectHotspot(idx),
+    onSelectHotspotIndex: (idx) => {
+      if (phase === 'transit') {
+        if (idx === 0) selectNavTarget('moon');
+        else if (idx === 1) selectNavTarget('mars');
+        return;
+      }
+      surfaceCtrl?.selectHotspot(idx, true);
+    },
+    onDiagnosticTest: () => surfaceCtrl?.triggerDiagnosticTest(),
     onHoldStart: () => hud.startKeyboardHold(),
     onHoldEnd: () => hud.stopKeyboardHold(),
+    onRetry: () => triggerRetryDescent(),
+    onLaunchOrbit: () => triggerLaunchOrbit(),
   });
 
   function updateViewportSize(): void {
@@ -120,27 +194,46 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
     transitCtrl = null;
     descentCtrl?.dispose();
     descentCtrl = null;
+    ascentCtrl?.dispose();
+    ascentCtrl = null;
     surfaceCtrl?.dispose();
     surfaceCtrl = null;
   }
 
-  function enterPhase(next: ExpeditionPhase): void {
+  function enterPhase(next: ExpeditionPhase, transitOptions?: TransitSceneOptions): void {
     clearAllScenes();
     phase = next;
     transitYaw = 0;
     transitPitch = 0;
+    lastLandingState = 'flying';
+    hud.setTouchdownState('flying');
 
     if (next === 'transit') {
-      transitCtrl = createTransitScene(artifact, tokens, reducedMotion);
+      transitCtrl = createTransitScene(artifact, tokens, reducedMotion, transitOptions);
       hud.setPhase('transit');
-      hud.announce(`Phase 1 Transit: Approaching ${artifact.body}. Press Enter or Skip to advance.`);
+      hud.setNavTargetBody(transitCtrl.getNavTarget?.() ?? artifact.body);
+      hud.setFlightAssistEngaged('transit', Boolean(transitCtrl.isAutoPilotEngaged?.()));
+      hud.announce(
+        `Phase 1 Transit: Use W or Space to thrust, WASD or Arrows to steer, G for Auto-Cruise, or Enter to skip.`,
+      );
     } else if (next === 'descent') {
       descentCtrl = createDescentScene(artifact, tokens, reducedMotion);
       hud.setPhase('descent');
-      hud.announce(`Phase 2 Descent: Entering approach over ${artifact.site.name}.`);
+      hud.setFlightAssistEngaged('descent', Boolean(descentCtrl.isAutoPilotEngaged?.()));
+      hud.setDescentRetryVisible(false);
+      hud.announce(
+        `Phase 2 Descent over ${artifact.site.name}: Space or W for retro-thrust, A/D lateral, G for Auto-Land, or Enter to deploy rover.`,
+      );
+    } else if (next === 'ascent') {
+      ascentCtrl = createAscentScene(artifact, tokens, reducedMotion);
+      hud.setPhase('ascent');
+      hud.announce(`Launching from ${artifact.body} back into interplanetary space.`);
     } else if (next === 'drive') {
-      surfaceCtrl = createSurfaceScene(artifact, hotspots, tokens, hud, reducedMotion);
-      hud.announce(`Phase 3 Surface Exploration near ${artifact.site.name}. Press Space for sonar pulse.`);
+      surfaceCtrl = createSurfaceScene(artifact, hotspots, tokens, hud, reducedMotion, planetArtifacts);
+      hud.setPhase('drive');
+      hud.announce(
+        `Phase 3 Surface Exploration on ${artifact.body.toUpperCase()}. All monuments active in their real coordinates. Press Space for sonar pulse or L to launch back to orbit.`,
+      );
     }
   }
 
@@ -150,6 +243,8 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
       enterPhase('descent');
     } else if (phase === 'descent') {
       enterPhase('drive');
+    } else if (phase === 'ascent') {
+      enterPhase('transit', { departedFrom: artifact.body });
     }
   }
 
@@ -232,19 +327,41 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
       input.consumeWheelZoom();
       transitYaw += orbit.yaw;
       transitPitch += orbit.pitch;
-      const done = transitCtrl.update(dt, camera, transitYaw, transitPitch);
+      const done = transitCtrl.update(dt, camera, transitYaw, transitPitch, input);
       hud.setDistanceReadout(transitCtrl.getHudStatus());
       renderer.render(transitCtrl.scene, camera);
-      if (done) enterPhase('descent');
+      if (done) {
+        const captured = transitCtrl.getCapturedBody?.() ?? artifact.body;
+        if (captured !== artifact.body && onCaptureOtherBody) {
+          onCaptureOtherBody(captured);
+          return;
+        }
+        enterPhase('descent');
+      }
     } else if (phase === 'descent' && descentCtrl) {
       const orbit = input.consumeOrbitDelta();
       input.consumeWheelZoom();
       transitYaw += orbit.yaw;
       transitPitch += orbit.pitch;
-      const done = descentCtrl.update(dt, camera, transitYaw, transitPitch);
+      const done = descentCtrl.update(dt, camera, transitYaw, transitPitch, input);
+      const landingState = descentCtrl.getLandingState?.() ?? 'flying';
+      if (landingState !== lastLandingState) {
+        lastLandingState = landingState;
+        hud.setDescentRetryVisible(landingState !== 'flying');
+        hud.setTouchdownState(landingState, descentCtrl.getImpactInfo?.());
+      }
       hud.setDistanceReadout(descentCtrl.getHudStatus());
       renderer.render(descentCtrl.scene, camera);
       if (done) enterPhase('drive');
+    } else if (phase === 'ascent' && ascentCtrl) {
+      const orbit = input.consumeOrbitDelta();
+      input.consumeWheelZoom();
+      transitYaw += orbit.yaw;
+      transitPitch += orbit.pitch;
+      const done = ascentCtrl.update(dt, camera, transitYaw, transitPitch, input);
+      hud.setDistanceReadout(ascentCtrl.getHudStatus());
+      renderer.render(ascentCtrl.scene, camera);
+      if (done) enterPhase('transit', { departedFrom: artifact.body });
     } else if (surfaceCtrl) {
       surfaceCtrl.update(dt, nowMs, camera, input);
       const nextSub = surfaceCtrl.getSubMode();
@@ -256,7 +373,7 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
   }
 
   updateViewportSize();
-  enterPhase('transit');
+  enterPhase(initialPhase);
   rafId = window.requestAnimationFrame(loop);
 
   return {

@@ -1,15 +1,9 @@
 import {
-  DISCOVERY_EVENT,
-  getArtifactDiscoveryState,
   getReadingMode,
-  readDiscoveryState,
   setReadingMode,
-  subscribeDiscoveryChange,
   subscribeReadingModeChange,
-  type DiscoveryStatus,
   type ReadingMode,
 } from '../discovery';
-import { formatCoordinates } from '../format';
 import { isSonarEnabled, playSonarTone } from '../sonar';
 import type { ExpeditionArtifact, ExpeditionController } from './types';
 
@@ -22,12 +16,6 @@ function readCatalogFromDom(): ExpeditionArtifact[] {
   } catch {
     return [];
   }
-}
-
-function discoveryLabel(status: DiscoveryStatus): string {
-  if (status === 'recovered') return 'RECOVERED';
-  if (status === 'inspected') return 'INSPECTED';
-  return 'DORMANT';
 }
 
 export function initExpeditionSection(): void {
@@ -46,26 +34,20 @@ export function initExpeditionSection(): void {
   const hudEl = document.getElementById('expedition-hud');
   const fallbackEl = document.getElementById('expedition-webgl-fallback');
   const liveRegionEl = document.getElementById('expedition-live-region');
-  const launchPanelEl = document.getElementById('expedition-launch-panel');
-  const briefingEl = document.getElementById('expedition-selected-briefing');
   const standbyTitleEl = document.getElementById('expedition-standby-title');
   const standbySummaryEl = document.getElementById('expedition-standby-summary');
-  const launchBtn = document.getElementById('expedition-launch-btn') as HTMLButtonElement | null;
+  const standbyLaunchBtn = document.getElementById(
+    'expedition-standby-launch-btn',
+  ) as HTMLButtonElement | null;
   const fullscreenCheckbox = document.getElementById(
     'expedition-fullscreen-toggle',
   ) as HTMLInputElement | null;
 
-  const cardButtons = Array.from(
-    document.querySelectorAll<HTMLButtonElement>('[data-expedition-select]'),
-  );
   const modeButtons = Array.from(
     document.querySelectorAll<HTMLButtonElement>('[data-expedition-reading-mode]'),
   );
-  const discoveryPills = Array.from(
-    document.querySelectorAll<HTMLElement>('[data-expedition-discovery]'),
-  );
 
-  if (!stageEl || !standbyEl || !canvasEl || !hudEl || !fallbackEl || !launchBtn) {
+  if (!stageEl || !standbyEl || !canvasEl || !hudEl || !fallbackEl) {
     return;
   }
 
@@ -74,7 +56,6 @@ export function initExpeditionSection(): void {
   const canvas = canvasEl;
   const hud = hudEl;
   const fallback = fallbackEl;
-  const launchButton = launchBtn;
 
   function updateReadingModeUi(mode: ReadingMode): void {
     currentMode = mode;
@@ -86,41 +67,22 @@ export function initExpeditionSection(): void {
     activeController?.setReadingMode(mode);
   }
 
-  function updateDiscoveryPills(): void {
-    const snapshot = readDiscoveryState(byId.keys());
-    for (const pill of discoveryPills) {
-      const id = pill.dataset.expeditionDiscovery ?? '';
-      const status = getArtifactDiscoveryState(id, snapshot);
-      pill.dataset.discoveryState = status;
-      pill.textContent = discoveryLabel(status);
-    }
-  }
-
   function updateSelectionUi(): void {
     const artifact = byId.get(selectedId) ?? catalog[0];
     selectedId = artifact.id;
 
-    for (const btn of cardButtons) {
-      const isSelected = btn.dataset.expeditionSelect === selectedId;
-      btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-    }
-
-    const coords = formatCoordinates(artifact.site.lat, artifact.site.lon);
-    if (briefingEl) {
-      briefingEl.textContent = `${artifact.name} · ${artifact.site.name} (${coords})`;
-    }
     if (standbyTitleEl) {
-      standbyTitleEl.textContent = `Ready for Launch: ${artifact.name}`;
+      standbyTitleEl.textContent = 'Interplanetary Space & Surface Simulator';
     }
     if (standbySummaryEl) {
       standbySummaryEl.textContent =
         currentMode === 'explorer'
-          ? (artifact.kidSummary ?? artifact.scientificValue)
-          : artifact.scientificValue;
+          ? 'Fly from Earth orbit to the Moon or Mars, land on the pad, then drive your miniature rover to all historical monuments placed in their real coordinates.'
+          : 'Unified 3D orbital mechanics, powered descent (Mars 3.72 m/s², Moon 1.62 m/s²), and multi-site planetary surface exploration across real landing zones.';
     }
   }
 
-  function restoreStandbyUi(scrollToSelector: boolean): void {
+  function restoreStandbyUi(): void {
     if (activeController) {
       activeController.destroy();
       activeController = null;
@@ -138,21 +100,31 @@ export function initExpeditionSection(): void {
     fallback.hidden = true;
     standby.hidden = false;
 
-    launchButton.disabled = false;
-    launchButton.textContent = 'Launch Expedition ->';
-
-    if (scrollToSelector) {
-      launchPanelEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (standbyLaunchBtn) {
+      standbyLaunchBtn.disabled = false;
+      standbyLaunchBtn.textContent = 'Launch Space Simulator ->';
     }
   }
 
-  async function handleLaunch(): Promise<void> {
+  function findArtifactForBody(body: 'mars' | 'moon'): ExpeditionArtifact {
+    return (
+      catalog.find((a) => a.body === body && a.featured) ??
+      catalog.find((a) => a.body === body) ??
+      catalog[0]
+    );
+  }
+
+  async function handleLaunch(
+    initialPhase: 'transit' | 'descent' | 'drive' = 'transit',
+  ): Promise<void> {
     if (launching) return;
     const artifact = byId.get(selectedId) ?? catalog[0];
 
     launching = true;
-    launchButton.disabled = true;
-    launchButton.textContent = 'Initializing 3D...';
+    if (standbyLaunchBtn) {
+      standbyLaunchBtn.disabled = true;
+      standbyLaunchBtn.textContent = 'Initializing 3D...';
+    }
 
     // Initialize Web Audio inside user gesture only when sonar audio is enabled
     if (isSonarEnabled()) {
@@ -182,6 +154,7 @@ export function initExpeditionSection(): void {
 
       activeController = launchExpedition({
         artifact,
+        planetArtifacts: catalog.filter((item) => item.body === artifact.body),
         canvas,
         hudRoot: hud,
         stageEl: stage,
@@ -189,35 +162,50 @@ export function initExpeditionSection(): void {
         standbyEl: standby,
         liveRegionEl,
         initialMode: currentMode,
+        initialPhase,
         reducedMotion,
-        onExit: () => restoreStandbyUi(false),
-        onSelectAnother: () => restoreStandbyUi(true),
+        onExit: () => restoreStandbyUi(),
+        onSelectAnother: () => restoreStandbyUi(),
+        onCaptureOtherBody: (capturedBody) => {
+          const nextArtifact = findArtifactForBody(capturedBody);
+          selectedId = nextArtifact.id;
+          updateSelectionUi();
+          queueMicrotask(() => {
+            launching = false;
+            void handleLaunch('descent');
+          });
+        },
       });
 
       stage.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest' });
-      launchButton.disabled = false;
-      launchButton.textContent = 'Relaunch Selected ->';
+      if (standbyLaunchBtn) {
+        standbyLaunchBtn.disabled = false;
+        standbyLaunchBtn.textContent = 'Launch Space Simulator ->';
+      }
     } catch {
       standby.hidden = true;
       canvas.hidden = true;
       hud.hidden = true;
       fallback.hidden = false;
-      launchButton.disabled = false;
-      launchButton.textContent = 'Retry Launch ->';
+      if (standbyLaunchBtn) {
+        standbyLaunchBtn.disabled = false;
+        standbyLaunchBtn.textContent = 'Retry Launch ->';
+      }
     } finally {
       launching = false;
     }
   }
 
-  for (const btn of cardButtons) {
+  const deployBodyButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-expedition-deploy-body]'),
+  );
+  for (const btn of deployBodyButtons) {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.expeditionSelect;
-      if (id && byId.has(id)) {
-        selectedId = id;
+      const bodyAttr = btn.dataset.expeditionDeployBody;
+      if (bodyAttr === 'mars' || bodyAttr === 'moon') {
+        selectedId = findArtifactForBody(bodyAttr).id;
         updateSelectionUi();
-        if (isSonarEnabled()) {
-          playSonarTone('tick');
-        }
+        void handleLaunch('drive');
       }
     });
   }
@@ -229,15 +217,23 @@ export function initExpeditionSection(): void {
     });
   }
 
-  launchBtn.addEventListener('click', () => {
-    void handleLaunch();
+  standbyLaunchBtn?.addEventListener('click', () => {
+    void handleLaunch('transit');
   });
 
   subscribeReadingModeChange(updateReadingModeUi);
-  subscribeDiscoveryChange(updateDiscoveryPills);
-  window.addEventListener(DISCOVERY_EVENT, updateDiscoveryPills);
-
   updateReadingModeUi(currentMode);
-  updateDiscoveryPills();
-  updateSelectionUi();
+
+  // Direct handoff from Game 3 landing pages (`/?explore=mars#expedition` or `/?explore=moon#expedition`)
+  const searchParams = new URLSearchParams(window.location.search);
+  const exploreBody = searchParams.get('explore');
+  if (exploreBody === 'mars' || exploreBody === 'moon') {
+    const landingTarget = findArtifactForBody(exploreBody);
+    selectedId = landingTarget.id;
+    updateSelectionUi();
+    window.history.replaceState(null, '', `${window.location.pathname}#expedition`);
+    void handleLaunch('drive');
+  } else {
+    updateSelectionUi();
+  }
 }

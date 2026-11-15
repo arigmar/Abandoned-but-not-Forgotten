@@ -3,7 +3,18 @@ import type { ReadingMode } from '../discovery';
 
 export type ExpeditionArtifact = Omit<Artifact, 'image'>;
 
-export type ExpeditionPhase = 'transit' | 'descent' | 'drive' | 'inspect' | 'complete';
+export type ExpeditionPhase = 'transit' | 'descent' | 'drive' | 'inspect' | 'complete' | 'ascent';
+
+export interface HotspotTelemetry {
+  subsystemTag: string;
+  nominalMetric: string;
+  nominalValue: string;
+  finalMetric: string;
+  finalValue: string;
+  waveform: 'power' | 'scale' | 'seismic' | 'sensor' | 'relay';
+  testLabel: string;
+  testResult: string;
+}
 
 export interface HotspotData {
   id: string;
@@ -13,6 +24,7 @@ export interface HotspotData {
   title: string;
   explorerBody: string;
   technicalBody: string;
+  telemetry: HotspotTelemetry;
   sourceTitle?: string;
   sourceUrl?: string;
 }
@@ -28,6 +40,7 @@ export interface ProjectedHotspot {
 
 export interface ExpeditionLaunchOptions {
   artifact: ExpeditionArtifact;
+  planetArtifacts?: ExpeditionArtifact[];
   canvas: HTMLCanvasElement;
   hudRoot: HTMLElement;
   stageEl: HTMLElement;
@@ -35,9 +48,11 @@ export interface ExpeditionLaunchOptions {
   standbyEl: HTMLElement;
   liveRegionEl: HTMLElement | null;
   initialMode: ReadingMode;
+  initialPhase?: 'transit' | 'descent' | 'drive';
   reducedMotion: boolean;
   onExit: () => void;
   onSelectAnother: () => void;
+  onCaptureOtherBody?: (body: 'mars' | 'moon') => void;
 }
 
 export interface ExpeditionController {
