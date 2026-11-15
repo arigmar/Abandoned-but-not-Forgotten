@@ -20,7 +20,6 @@ contenedor.addEventListener('click', () => contenedor.focus());
 const escena = new THREE.Scene();
 escena.background = new THREE.Color(0x010106);
 
-// Plano lejano ampliado a 12000 para soportar distancias interplanetarias realistas
 const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 12000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -34,10 +33,9 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5
 const cargador = new GLTFLoader();
 cargador.setDRACOLoader(dracoLoader);
 
-// --- SOL LEJANO A ESCALA ASTRONÓMICA ---
 const POS_SOL = new THREE.Vector3(2200, 950, -4200);
 const RADIO_SOL = 420;
-const DISTANCIA_LIMITE_SOL = 950; // Zona de radiación térmica infranqueable
+const DISTANCIA_LIMITE_SOL = 950;
 
 const grupoSol = new THREE.Group();
 grupoSol.position.copy(POS_SOL);
@@ -101,7 +99,6 @@ cargador.load(
   (err) => console.error('Failed to load sun.glb:', err)
 );
 
-// Iluminación para mantener visibles los colores de Tierra, Luna y Marte
 escena.add(new THREE.AmbientLight(0xffffff, 1.4));
 const solLuz = new THREE.DirectionalLight(0xfff5e6, 3.0);
 solLuz.position.set(300, 150, 250);
@@ -129,7 +126,6 @@ const estrellasAzules  = crearCapaEstrellas(1600, 8000,  3.5, 0xaaccff, 0.9);
 const estrellasCalidas = crearCapaEstrellas(800,  6500,  4.2, 0xffddaa, 1.0);
 escena.add(estrellasLejanas, estrellasAzules, estrellasCalidas);
 
-// --- PUNTOS DE PLANETAS LEJANOS ---
 function crearPlanetasLejanos(cantidad, radioMin, radioMax) {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(cantidad * 3);
@@ -244,8 +240,6 @@ function crearPlaneta({ posicion, radio, colorRespaldo, urlGLB, atmosferaColor =
   return grupo;
 }
 
-// --- CUERPOS CELESTES CON PROPORCIONES Y DISTANCIAS REALISTAS ---
-// 1. Tierra: punto de partida cercano (órbita terrestre)
 const POS_TIERRA = new THREE.Vector3(-45, -30, 140);
 const RADIO_TIERRA = 55;
 const tierra = crearPlaneta({
@@ -256,7 +250,6 @@ const tierra = crearPlaneta({
   urlGLB: '/assets/games/earth.glb'
 });
 
-// 2. Luna: ~1/4 del tamaño de la Tierra y orbitando en su vecindad
 const POS_LUNA = new THREE.Vector3(-240, 45, -280);
 const RADIO_LUNA = 15;
 const luna = crearPlaneta({
@@ -266,7 +259,6 @@ const luna = crearPlaneta({
   urlGLB: '/assets/games/Lune.glb'
 });
 
-// 3. Marte: ~53% del tamaño de la Tierra y a distancia interplanetaria
 const POS_MARTE = new THREE.Vector3(380, -35, -1350);
 const RADIO_MARTE = 30;
 const marte = crearPlaneta({
@@ -288,7 +280,6 @@ const cuerpoTemporal = new THREE.Mesh(
 );
 modeloVisualNave.add(cuerpoTemporal);
 
-// --- PROPULSORES NARANJAS (SOLO LOS 2 LATERALES) ---
 const grupoPropulsores = new THREE.Group();
 grupoPropulsores.position.z = 2.2;
 modeloVisualNave.add(grupoPropulsores);
@@ -353,14 +344,22 @@ Object.assign(flashEntrada.style, {
 contenedor.appendChild(flashEntrada);
 
 let estado = 'volando';
-let velocidad = 0;
+const vectorVelocidad = new THREE.Vector3(0, 0, 0);
+const velocidadAngular = new THREE.Vector3(0, 0, 0);
+let velocidadEntradaMarte = 0;
 let redirigiendo = false;
+
+const VELOCIDAD_MAXIMA = 320;
+const EMPUJE_PRINCIPAL = 105;
+const EMPUJE_FRENADO = 120;
 
 function reiniciar() {
   nave.position.set(0, 0, 0);
   nave.rotation.set(0, 0, 0);
   modeloVisualNave.rotation.set(0, 0, 0);
-  velocidad = 0;
+  vectorVelocidad.set(0, 0, 0);
+  velocidadAngular.set(0, 0, 0);
+  velocidadEntradaMarte = 0;
   estado = 'volando';
   redirigiendo = false;
   flashEntrada.style.opacity = '0';
@@ -397,6 +396,8 @@ window.addEventListener('blur', () => {
 const reloj = new THREE.Clock();
 const gate = createRenderGate(contenedor);
 
+const dirFrente = new THREE.Vector3();
+
 function actualizar() {
   requestAnimationFrame(actualizar);
 
@@ -415,41 +416,64 @@ function actualizar() {
     const acelerando = teclas['KeyW'] || teclas['w'] || teclas['Space'];
     const frenando   = teclas['KeyS'] || teclas['s'];
 
+    const acelAngular = 3.2;
+    let inputYaw = 0;
+    let inputPitch = 0;
+
+    if (teclas['ArrowLeft'] || teclas['KeyA'] || teclas['a'])  inputYaw += 1;
+    if (teclas['ArrowRight'] || teclas['KeyD'] || teclas['d']) inputYaw -= 1;
+    if (teclas['ArrowUp'] || teclas['KeyI'])                   inputPitch += 1;
+    if (teclas['ArrowDown'] || teclas['KeyK'])                 inputPitch -= 1;
+
+    if (inputYaw !== 0) {
+      velocidadAngular.y = THREE.MathUtils.clamp(velocidadAngular.y + inputYaw * acelAngular * dt, -1.7, 1.7);
+    } else {
+      velocidadAngular.y *= Math.pow(0.08, dt);
+      if (Math.abs(velocidadAngular.y) < 0.005) velocidadAngular.y = 0;
+    }
+
+    if (inputPitch !== 0) {
+      velocidadAngular.x = THREE.MathUtils.clamp(velocidadAngular.x + inputPitch * acelAngular * dt, -1.7, 1.7);
+    } else {
+      velocidadAngular.x *= Math.pow(0.08, dt);
+      if (Math.abs(velocidadAngular.x) < 0.005) velocidadAngular.x = 0;
+    }
+
+    nave.rotateY(velocidadAngular.y * dt);
+    nave.rotateX(velocidadAngular.x * dt);
+
+    const inclinacionObjetivo = velocidadAngular.y * 0.35;
+    modeloVisualNave.rotation.z = THREE.MathUtils.lerp(
+      modeloVisualNave.rotation.z,
+      inclinacionObjetivo,
+      6 * dt
+    );
+
     if (acelerando) {
-      velocidad = Math.min(velocidad + 140 * dt, 320);
+      nave.getWorldDirection(dirFrente).negate();
+      vectorVelocidad.addScaledVector(dirFrente, EMPUJE_PRINCIPAL * dt);
+
+      if (vectorVelocidad.length() > VELOCIDAD_MAXIMA) {
+        vectorVelocidad.setLength(VELOCIDAD_MAXIMA);
+      }
+
       grupoPropulsores.visible = true;
       fuegoIzq.scale.z = 0.8 + Math.random() * 0.6;
       fuegoDer.scale.z = 0.8 + Math.random() * 0.6;
     } else if (frenando) {
-      velocidad = Math.max(velocidad - 180 * dt, 0);
+      const rapidezActual = vectorVelocidad.length();
+      if (rapidezActual > 0) {
+        const nuevaRapidez = Math.max(rapidezActual - EMPUJE_FRENADO * dt, 0);
+        vectorVelocidad.setLength(nuevaRapidez);
+      }
       grupoPropulsores.visible = false;
     } else {
-      velocidad *= 0.985;
-      if (velocidad < 0.1) velocidad = 0;
       grupoPropulsores.visible = false;
     }
 
-    const velGiro = 1.8;
-    let giroY = 0;
-    let giroX = 0;
+    nave.position.addScaledVector(vectorVelocidad, dt);
 
-    if (teclas['ArrowLeft'] || teclas['KeyA'] || teclas['a'])  giroY += 1;
-    if (teclas['ArrowRight'] || teclas['KeyD'] || teclas['d']) giroY -= 1;
-    if (teclas['ArrowUp'] || teclas['KeyI'])                   giroX += 1;
-    if (teclas['ArrowDown'] || teclas['KeyK'])                 giroX -= 1;
-
-    nave.rotateY(giroY * velGiro * dt);
-    nave.rotateX(giroX * velGiro * dt);
-
-    const inclinacionObjetivo = giroY * 0.45;
-    modeloVisualNave.rotation.z = THREE.MathUtils.lerp(
-      modeloVisualNave.rotation.z,
-      inclinacionObjetivo,
-      8 * dt
-    );
-
-    nave.translateZ(-velocidad * dt);
-
+    const rapidez = vectorVelocidad.length();
     const distLuna   = nave.position.distanceTo(POS_LUNA)   - RADIO_LUNA;
     const distMarte  = nave.position.distanceTo(POS_MARTE)  - RADIO_MARTE;
     const distTierra = nave.position.distanceTo(POS_TIERRA) - RADIO_TIERRA;
@@ -457,25 +481,26 @@ function actualizar() {
 
     if (distSol < DISTANCIA_LIMITE_SOL) {
       estado = 'fallo_sol';
-      velocidad = 0;
+      vectorVelocidad.set(0, 0, 0);
       grupoPropulsores.visible = false;
       flashEntrada.style.opacity = '0.45';
     }
 
     if (distLuna < 12) {
       estado = 'fallo_luna';
-      velocidad = 0;
+      vectorVelocidad.set(0, 0, 0);
       grupoPropulsores.visible = false;
     }
 
     if (distTierra < 15) {
       estado = 'fallo_tierra';
-      velocidad = 0;
+      vectorVelocidad.set(0, 0, 0);
       grupoPropulsores.visible = false;
     }
 
     if (distMarte < 45) {
       estado = 'acelerando_marte';
+      velocidadEntradaMarte = Math.max(rapidez, 140);
       modeloVisualNave.rotation.z = 0;
       nave.lookAt(POS_MARTE);
       nave.rotateY(Math.PI);
@@ -484,8 +509,8 @@ function actualizar() {
     hud.setTelemetry(`
       <span class="game-hud__title">Mission: reach Mars (the red planet)</span>
       Mars ${Math.max(0, distMarte).toFixed(0)} km · Moon ${Math.max(0, distLuna).toFixed(0)} km · Earth ${Math.max(0, distTierra).toFixed(0)} km<br>
-      Speed ${velocidad.toFixed(0)} km/s
-      <span class="game-hud__controls">[W / Space] Thrust · [S] Brake · [A / D / &larr; &rarr;] Turn · [&uarr; &darr;] Pitch</span>
+      Inertia Speed ${rapidez.toFixed(0)} km/s
+      <span class="game-hud__controls">[W / Space] Thrust · [S] Retro-Brake · [A / D / &larr; &rarr;] Yaw · [&uarr; &darr;] Pitch</span>
     `);
     hud.setStatus('');
   }
@@ -515,8 +540,8 @@ function actualizar() {
   }
 
   else if (estado === 'acelerando_marte') {
-    velocidad += 350 * dt;
-    nave.translateZ(-velocidad * dt);
+    velocidadEntradaMarte += 350 * dt;
+    nave.translateZ(-velocidadEntradaMarte * dt);
 
     if (camara.fov < 115) {
       camara.fov += 90 * dt;
