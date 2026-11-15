@@ -1,0 +1,144 @@
+---
+import { SITE } from '../config/site';
+import { withBase } from '../lib/base-path';
+
+const flightSrc = withBase('/vuelo');
+const fullScreenHref = withBase('/vuelo');
+const aspectClass = SITE.gameAspectRatio === '4:3' ? 'aspect-[4/3]' : 'aspect-video';
+---
+
+<section
+  id="flight"
+  class="mt-6 space-y-4 border border-[var(--color-border-strong)] bg-[var(--color-void)] p-4 sm:p-6"
+  aria-labelledby="flight-cta-heading"
+>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="max-w-2xl space-y-2">
+      <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+        Flight mission · Three.js · Two-stage expedition
+      </p>
+      <h3
+        id="flight-cta-heading"
+        class="font-serif-display text-3xl tracking-tight text-[var(--color-text-primary)]"
+      >
+        Flight to Mars &amp; Descent
+      </h3>
+      <p class="text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
+        Pilot the historian drone from Earth to the red planet, then bring it down onto the
+        landing pad. The mission streams only when you launch it, so the archive stays light
+        until then.
+      </p>
+    </div>
+
+    <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <button
+        type="button"
+        id="flight-launch"
+        class="inline-flex cursor-pointer items-center gap-2 border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-4 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase transition-colors hover:border-[var(--color-turquoise)]"
+        aria-controls="flight-stage"
+      >
+        Launch mission
+        <span aria-hidden="true">&rarr;</span>
+      </button>
+      <a
+        href={fullScreenHref}
+        target="_top"
+        class="inline-flex items-center border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3 py-2.5 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+      >
+        Full screen
+      </a>
+    </div>
+  </div>
+
+  <div
+    id="flight-stage"
+    class={`relative w-full overflow-hidden border border-[var(--color-border)] bg-[var(--color-void)] ${aspectClass}`}
+    data-state="standby"
+    data-src={flightSrc}
+  >
+    <div
+      id="flight-standby"
+      class="flex h-full w-full flex-col items-center justify-center gap-3 bg-reticle-grid p-6 text-center"
+    >
+      <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+        Flight module · Standby
+      </p>
+      <p class="max-w-sm text-xs leading-relaxed text-[var(--color-text-secondary)]">
+        The transit and descent scenes load on demand. Press Launch mission to stream the
+        3D module and start the flight to Mars.
+      </p>
+      <p class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
+        [W / Space] Thrust · [A / D] Turn · [Arrows] Pitch · [R] Restart
+      </p>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-3 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
+    <span id="flight-state">Status: Mission standby</span>
+    <span id="flight-hint">Launch to load the 3D module · Back to museum inside the mission returns here</span>
+  </div>
+</section>
+
+<script>
+  const stage = document.getElementById('flight-stage') as HTMLElement | null;
+  const standby = document.getElementById('flight-standby');
+  const launchBtn = document.getElementById('flight-launch') as HTMLButtonElement | null;
+  const stateLabel = document.getElementById('flight-state');
+  const hint = document.getElementById('flight-hint');
+
+  let iframe: HTMLIFrameElement | null = null;
+
+  const setRunning = (running: boolean) => {
+    if (!stage) return;
+    stage.dataset.state = running ? 'running' : 'standby';
+    if (stateLabel) {
+      stateLabel.textContent = running ? 'Status: Uplink online' : 'Status: Mission standby';
+    }
+  };
+
+  const exitMission = () => {
+    iframe?.remove();
+    iframe = null;
+    standby?.removeAttribute('hidden');
+    setRunning(false);
+    if (launchBtn) {
+      launchBtn.innerHTML = 'Launch mission <span aria-hidden="true">&rarr;</span>';
+      launchBtn.focus();
+    }
+    if (hint) {
+      hint.textContent =
+        'Launch to load the 3D module · Back to museum inside the mission returns here';
+    }
+  };
+
+  const launchMission = () => {
+    if (!stage || iframe) return;
+    const src = stage.dataset.src;
+    if (!src) return;
+
+    iframe = document.createElement('iframe');
+    iframe.id = 'flight-iframe';
+    iframe.title = 'Flight to Mars — interactive 3D mission';
+    iframe.src = src;
+    iframe.className = 'h-full w-full border-0 bg-[var(--color-void)]';
+    iframe.setAttribute('allow', 'fullscreen; autoplay');
+    stage.appendChild(iframe);
+    standby?.setAttribute('hidden', '');
+    setRunning(true);
+
+    if (launchBtn) {
+      launchBtn.innerHTML = 'Exit mission <span aria-hidden="true">&times;</span>';
+    }
+    if (hint) {
+      hint.textContent = 'Mission running · A thin bar inside the frame returns to this section';
+    }
+  };
+
+  launchBtn?.addEventListener('click', () => {
+    if (iframe) {
+      exitMission();
+    } else {
+      launchMission();
+    }
+  });
+</script>
