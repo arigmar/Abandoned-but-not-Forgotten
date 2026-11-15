@@ -792,7 +792,6 @@ const vueloUrl = withBase('/vuelo');
     const assistBtn = document.getElementById('hud-assist-btn') as HTMLButtonElement | null;
     const skipBtn = document.getElementById('hud-skip-btn') as HTMLButtonElement | null;
     const pauseBtn = document.getElementById('hud-pause-btn') as HTMLButtonElement | null;
-    const resumeBtn = document.getElementById('hud-resume-btn') as HTMLButtonElement | null;
     const exitBtn = document.getElementById('hud-exit-btn') as HTMLButtonElement | null;
     const pauseOverlay = document.getElementById('expedition-pause-overlay');
     const baseVueloUrl = section?.getAttribute('data-vuelo-url') || '/vuelo';
@@ -804,6 +803,7 @@ const vueloUrl = withBase('/vuelo');
     function openVueloFlightLayer(fromBody?: 'mars' | 'moon' | null) {
       if (!vueloContainer || !vueloFrame) return;
       handingOff = false;
+      if (stage) stage.dataset.vueloActive = 'true';
 
       // Pausar el motor interno de #expedition mientras /vuelo está activo
       // para que no avance en segundo plano hacia Marte por su cuenta
@@ -832,6 +832,7 @@ const vueloUrl = withBase('/vuelo');
 
     function closeVueloFlightLayer() {
       if (!vueloContainer || !vueloFrame) return;
+      if (stage) delete stage.dataset.vueloActive;
       if (!vueloContainer.hidden) {
         vueloContainer.hidden = true;
         vueloFrame.src = 'about:blank';
@@ -842,7 +843,7 @@ const vueloUrl = withBase('/vuelo');
       }
     }
 
-    // Pasar de /vuelo al motor nativo de #expedition asegurando que cargue el planeta exacto (Luna o Marte)
+    // Pasar de /vuelo al motor nativo de #expedition asegurando que cargue el aterrizaje del planeta exacto (Luna o Marte)
     function handoffFlightToExpedition(targetBody: 'moon' | 'mars') {
       if (handingOff) return;
       handingOff = true;
@@ -850,65 +851,12 @@ const vueloUrl = withBase('/vuelo');
 
       closeVueloFlightLayer();
 
-      // Reanudar el motor interno si estaba pausado durante el vuelo
-      if (pauseOverlay && !pauseOverlay.hidden) {
-        resumeBtn?.click();
-      }
+      window.dispatchEvent(
+        new CustomEvent('expedition:start-descent', { detail: { body: targetBody } })
+      );
 
-      // Seleccionar explícitamente el planeta alcanzado (Moon [1] o Mars [2])
-      syncingTarget = true;
-      if (targetBody === 'moon') {
-        targetMoonBtn?.click();
-        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '1' }));
-      } else {
-        targetMarsBtn?.click();
-        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit2', key: '2' }));
-      }
-      syncingTarget = false;
-
-      // Esperar un frame para que el motor interno fije el planeta (Luna o Marte)
-      // antes de saltar la Fase 01 hacia el descenso/superficie
       requestAnimationFrame(() => {
-        skipBtn?.click();
-
-        // Verificación de respaldo: si el título del HUD no corresponde al planeta elegido,
-        // desplegar directamente los 3 sitios de ese planeta
-        setTimeout(() => {
-          const targetName = (
-            document.getElementById('hud-target-name')?.textContent || ''
-          ).toLowerCase();
-          const siteCoords = (
-            document.getElementById('hud-site-coords')?.textContent || ''
-          ).toLowerCase();
-
-          if (
-            targetBody === 'moon' &&
-            !targetName.includes('apollo') &&
-            !targetName.includes('luna') &&
-            !targetName.includes('surveyor') &&
-            !targetName.includes('moon') &&
-            !siteCoords.includes('moon')
-          ) {
-            const deployMoonBtn = document.querySelector(
-              '[data-expedition-deploy-body="moon"]'
-            ) as HTMLButtonElement | null;
-            deployMoonBtn?.click();
-          } else if (
-            targetBody === 'mars' &&
-            !targetName.includes('perseverance') &&
-            !targetName.includes('curiosity') &&
-            !targetName.includes('opportunity') &&
-            !targetName.includes('mars') &&
-            !siteCoords.includes('mars')
-          ) {
-            const deployMarsBtn = document.querySelector(
-              '[data-expedition-deploy-body="mars"]'
-            ) as HTMLButtonElement | null;
-            deployMarsBtn?.click();
-          }
-
-          handingOff = false;
-        }, 50);
+        handingOff = false;
       });
     }
 
