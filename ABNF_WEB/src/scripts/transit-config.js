@@ -1,26 +1,44 @@
 /**
  * Shared planetary positions and orbital rules for the unified Earth-Moon-Mars
- * transit scene (`/vuelo` and `/vuelo-luna`). Both targets remain landable in
- * the same flight so players can fly between worlds freely.
+ * transit scene (`/vuelo` and `/vuelo-luna`) plus the full Solar System at
+ * unreachable astronomical distances.
  */
 export function createTransitConfig(initialTarget = 'mars') {
   return {
     initialTarget,
-    cruiseFlameColor: 0x2ec4b6,
+    cruiseFlameColor: 0xff7711,
+    asteroidCount: 8,
+
+    // El Sol usando el modelo 3D sun.glb
+    sun: {
+      id: 'sun',
+      label: 'Sun',
+      pos: [2200, 950, -4200],
+      radius: 420,
+      dangerDistance: 950,
+      realDistanceMkm: 149.6,
+      urlGLB: '/assets/games/sun.glb',
+    },
+
     bodies: [
+      // =====================================================
+      // MUNDOS JUGABLES (CRECEN AL ACERCARSE)
+      // =====================================================
       {
         id: 'moon',
         label: 'Moon',
-        pos: [-115, 22, -255],
-        radius: 10.5,
-        fallbackColor: 0x8a92a0,
+        pos: [-240, 45, -280],
+        radius: 18,
+        maxProximityScale: 2.35, // Se hace mucho más grande al acercarte
+        proximityRange: 260,
+        mass: 450,
+        fallbackColor: 0x888888,
         urlGLB: '/assets/games/Lune.glb',
-        rotSpeed: 0.09,
+        rotSpeed: 0.1,
         role: 'target',
         showCaptureRing: false,
-        ringColor: 0x2ec4b6,
-        triggerDistance: 14,
-        transitionRadius: 12,
+        triggerDistance: 18,
+        transitionRadius: 16,
         captureFlameColor: 0x9be7ff,
         captureFlashGradient: 'radial-gradient(circle, rgba(46, 196, 182, 0.55), #090d16 78%)',
         captureStatusTitle: 'ENTERING LUNAR ORBIT',
@@ -30,17 +48,20 @@ export function createTransitConfig(initialTarget = 'mars') {
       {
         id: 'mars',
         label: 'Mars',
-        pos: [130, -16, -340],
-        radius: 44,
+        pos: [380, -35, -1350],
+        radius: 42,
+        maxProximityScale: 2.5, // Crece de forma imponente al aproximarse
+        proximityRange: 520,
+        mass: 2400,
         fallbackColor: 0xc1440e,
         atmosphereColor: 0xff6622,
         urlGLB: '/assets/games/mars.glb',
         rotSpeed: 0.12,
         role: 'target',
+        hasMartianMoons: true,
         showCaptureRing: false,
-        ringColor: 0xff9f1c,
-        triggerDistance: 36,
-        transitionRadius: 45,
+        triggerDistance: 46,
+        transitionRadius: 38,
         captureFlameColor: 0xffaa44,
         captureFlashGradient: 'radial-gradient(circle, #ffaa44, #d9381e)',
         captureStatusTitle: 'ENTERING MARS ORBIT',
@@ -50,16 +71,163 @@ export function createTransitConfig(initialTarget = 'mars') {
       {
         id: 'earth',
         label: 'Earth',
-        pos: [-35, -28, 125],
-        radius: 52,
+        pos: [-45, -30, 145],
+        radius: 60,
+        maxProximityScale: 1.65,
+        proximityRange: 320,
+        mass: 4200,
         fallbackColor: 0x2266cc,
         atmosphereColor: 0x44aaff,
         urlGLB: '/assets/games/earth.glb',
         rotSpeed: 0.06,
         role: 'origin',
-        abortDistance: 8,
+        showCaptureRing: false,
+        abortDistance: 15,
         failTitle: 'MISSION ABORTED',
-        failBody: "You re-entered Earth's atmosphere.",
+        failBody: "You returned to Earth's atmosphere.",
+      },
+
+      // =====================================================
+      // DEMÁS PLANETAS DEL SISTEMA SOLAR (DISTANCIAS REALES)
+      // Visibles en el espacio pero inalcanzables para la nave
+      // =====================================================
+      {
+        id: 'mercury',
+        label: 'Mercury',
+        au: 0.39,
+        realDistanceMkm: 91.7,
+        pos: [1750, 680, -3450],
+        radius: 26,
+        fallbackColor: 0x9e9a95,
+        rotSpeed: 0.03,
+        role: 'solar_system',
+        showCaptureRing: false,
+        textureOpts: { base: '#8c8780', craters: 85 },
+      },
+      {
+        id: 'venus',
+        label: 'Venus',
+        au: 0.72,
+        realDistanceMkm: 41.4,
+        pos: [1150, 380, -2450],
+        radius: 52,
+        fallbackColor: 0xe3bb76,
+        atmosphereColor: 0xffcc77,
+        rotSpeed: -0.02,
+        role: 'solar_system',
+        showCaptureRing: false,
+        textureOpts: {
+          base: '#d9a85b',
+          bands: [
+            { y: 60, height: 35, color: '#f3d49b', opacity: 0.6 },
+            { y: 130, height: 45, color: '#c4883a', opacity: 0.5 },
+            { y: 200, height: 30, color: '#eed094', opacity: 0.6 },
+          ],
+        },
+      },
+      {
+        id: 'jupiter',
+        label: 'Jupiter',
+        au: 5.2,
+        realDistanceMkm: 628.7,
+        pos: [-2400, 260, -5200],
+        radius: 190,
+        fallbackColor: 0xd8a775,
+        atmosphereColor: 0xffcc99,
+        rotSpeed: 0.22,
+        tilt: 0.05,
+        role: 'solar_system',
+        showCaptureRing: false,
+        textureOpts: {
+          base: '#d7a97c',
+          bands: [
+            { y: 35, height: 18, color: '#9c6b43', opacity: 0.75 },
+            { y: 75, height: 22, color: '#f3e1cc', opacity: 0.8 },
+            { y: 120, height: 26, color: '#b57445', opacity: 0.75 },
+            { y: 168, height: 20, color: '#fff2e2', opacity: 0.8 },
+            { y: 210, height: 24, color: '#8f5e3b', opacity: 0.75 },
+          ],
+          spots: [{ x: 310, y: 162, rx: 32, ry: 16, color: '#c84b28', opacity: 0.85 }],
+        },
+      },
+      {
+        id: 'saturn',
+        label: 'Saturn',
+        au: 9.54,
+        realDistanceMkm: 1275.0,
+        pos: [-4800, -380, -8600],
+        radius: 160,
+        fallbackColor: 0xe6c88a,
+        atmosphereColor: 0xffe4aa,
+        rotSpeed: 0.19,
+        tilt: 0.46,
+        role: 'solar_system',
+        showCaptureRing: false,
+        textureOpts: {
+          base: '#e3c68c',
+          bands: [
+            { y: 50, height: 25, color: '#c7a467', opacity: 0.65 },
+            { y: 128, height: 35, color: '#f5dfb3', opacity: 0.7 },
+            { y: 195, height: 28, color: '#b89458', opacity: 0.65 },
+          ],
+        },
+        rings: {
+          innerRadius: 205,
+          outerRadius: 370,
+          colorStops: [
+            [0.0, 'rgba(180, 155, 115, 0.0)'],
+            [0.12, 'rgba(210, 185, 140, 0.65)'],
+            [0.45, 'rgba(235, 210, 165, 0.85)'],
+            [0.62, 'rgba(20, 20, 25, 0.1)'],
+            [0.68, 'rgba(220, 195, 150, 0.75)'],
+            [0.95, 'rgba(175, 150, 110, 0.35)'],
+            [1.0, 'rgba(175, 150, 110, 0.0)'],
+          ],
+        },
+      },
+      {
+        id: 'uranus',
+        label: 'Uranus',
+        au: 19.19,
+        realDistanceMkm: 2723.9,
+        pos: [-7600, 620, -12800],
+        radius: 115,
+        fallbackColor: 0x7de3f4,
+        atmosphereColor: 0x88ffff,
+        rotSpeed: -0.14,
+        tilt: 1.45,
+        role: 'solar_system',
+        showCaptureRing: false,
+        textureOpts: {
+          base: '#73d7e8',
+          bands: [
+            { y: 80, height: 40, color: '#99eefb', opacity: 0.45 },
+            { y: 170, height: 40, color: '#58b8c9', opacity: 0.45 },
+          ],
+        },
+      },
+      {
+        id: 'neptune',
+        label: 'Neptune',
+        au: 30.07,
+        realDistanceMkm: 4351.4,
+        pos: [-10800, -490, -17500],
+        radius: 110,
+        fallbackColor: 0x2b58de,
+        atmosphereColor: 0x4477ff,
+        rotSpeed: 0.15,
+        tilt: 0.49,
+        role: 'solar_system',
+        showCaptureRing: false,
+        textureOpts: {
+          base: '#2752cc',
+          bands: [
+            { y: 65, height: 28, color: '#1b3b99', opacity: 0.65 },
+            { y: 140, height: 32, color: '#4576f5', opacity: 0.55 },
+            { y: 205, height: 25, color: '#19358a', opacity: 0.65 },
+          ],
+          spots: [{ x: 180, y: 135, rx: 24, ry: 12, color: '#102361', opacity: 0.8 }],
+        },
       },
     ],
   };

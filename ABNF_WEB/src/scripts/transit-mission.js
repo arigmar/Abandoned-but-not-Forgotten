@@ -14,6 +14,85 @@ import {
 
 const DRACO_DECODER_URL = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
 
+// Modos de cámara disponibles con la tecla [V] o [C]
+const CAMERA_MODES = [
+  { name: 'Standard', offset: new THREE.Vector3(0, 3.3, 11.8), lookAhead: 16, baseFov: 60 },
+  { name: 'Close Action', offset: new THREE.Vector3(0, 2.1, 7.2), lookAhead: 24, baseFov: 65 },
+  { name: 'Panoramic', offset: new THREE.Vector3(0, 5.2, 17.5), lookAhead: 12, baseFov: 56 },
+];
+
+// ==========================================
+// 1. TEXTURAS PROCEDURALES, ESTRELLAS Y PLANETAS LEJANOS
+// ==========================================
+function createProceduralPlanetTexture({ base, bands = [], spots = [], craters = 0 }) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  bands.forEach(({ y, height, color, opacity = 0.5 }) => {
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    const grad = ctx.createLinearGradient(0, y - height, 0, y + height);
+    grad.addColorStop(0, 'transparent');
+    grad.addColorStop(0.5, color);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y - height, canvas.width, height * 2);
+    ctx.restore();
+  });
+
+  spots.forEach(({ x, y, rx, ry, color, opacity = 0.75 }) => {
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  for (let i = 0; i < craters; i++) {
+    const x = Math.random() * canvas.width;
+    const y = 20 + Math.random() * (canvas.height - 40);
+    const r = 2 + Math.random() * 14;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+function createRingTexture(colorStops) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  colorStops.forEach(([pos, col]) => grad.addColorStop(pos, col));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function createStarLayer(count, spread, size, colorHex, opacity = 1) {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(count * 3);
@@ -31,10 +110,48 @@ function createStarLayer(count, spread, size, colorHex, opacity = 1) {
   return new THREE.Points(geo, mat);
 }
 
-/**
- * Radial star-streaks attached in spacecraft frame that elongate cleanly
- * with forward velocity during planetary transit and orbit insertion.
- */
+function crearPlanetasLejanos(cantidad, radioMin, radioMax) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(cantidad * 3);
+  const colores = new Float32Array(cantidad * 3);
+
+  const paletaPlanetas = [
+    new THREE.Color(0x5599ff),
+    new THREE.Color(0xff8855),
+    new THREE.Color(0xeedd99),
+    new THREE.Color(0x77ddaa),
+    new THREE.Color(0xd488ff),
+  ];
+
+  for (let i = 0; i < cantidad; i++) {
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = radioMin + Math.random() * (radioMax - radioMin);
+
+    pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i * 3 + 2] = r * Math.cos(phi);
+
+    const color = paletaPlanetas[Math.floor(Math.random() * paletaPlanetas.length)];
+    colores[i * 3]     = color.r;
+    colores[i * 3 + 1] = color.g;
+    colores[i * 3 + 2] = color.b;
+  }
+
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colores, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 11,
+    vertexColors: true,
+    sizeAttenuation: true,
+  });
+
+  return new THREE.Points(geo, mat);
+}
+
 function createSpeedStreaks(count = 160) {
   const positions = new Float32Array(count * 6);
   const seeds = [];
@@ -91,15 +208,100 @@ function createSpeedStreaks(count = 160) {
   return { lines, update };
 }
 
-function createPlanet(scene, gltfLoader, spec) {
+// ==========================================
+// 2. SOL (sun.glb) Y PLANETAS CON ESCALA DINÁMICA
+// ==========================================
+function createSun(scene, gltfLoader, sunSpec) {
+  const basePos = new THREE.Vector3(...sunSpec.pos);
   const group = new THREE.Group();
-  const posVec = new THREE.Vector3(...spec.pos);
-  group.position.copy(posVec);
+  group.position.copy(basePos);
   scene.add(group);
 
+  const temporalSol = new THREE.Mesh(
+    new THREE.SphereGeometry(sunSpec.radius, 32, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffaa00 })
+  );
+  group.add(temporalSol);
+
+  const haloSol = new THREE.Mesh(
+    new THREE.SphereGeometry(sunSpec.radius * 1.25, 32, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0xff6600,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.BackSide,
+    })
+  );
+  group.add(haloSol);
+
+  if (sunSpec.urlGLB) {
+    gltfLoader.load(
+      withBase(sunSpec.urlGLB),
+      (gltf) => {
+        group.remove(temporalSol);
+        const modeloSol = gltf.scene;
+        const caja = new THREE.Box3();
+
+        modeloSol.traverse((hijo) => {
+          if (hijo.isMesh) {
+            hijo.material.side = THREE.DoubleSide;
+
+            if (hijo.material.metalness !== undefined) {
+              hijo.material.metalness = 0.0;
+              hijo.material.roughness = 1.0;
+            }
+
+            if (hijo.material.map) {
+              hijo.material.emissiveMap = hijo.material.map;
+              hijo.material.emissive = new THREE.Color(0xffffff);
+              hijo.material.emissiveIntensity = 1.2;
+            }
+
+            hijo.material.needsUpdate = true;
+            caja.expandByObject(hijo);
+          }
+        });
+
+        const tamano = caja.getSize(new THREE.Vector3());
+        const maxDim = Math.max(tamano.x, tamano.y, tamano.z);
+        const escala = maxDim > 0 ? (sunSpec.radius * 2) / maxDim : 1;
+        modeloSol.scale.setScalar(escala);
+
+        const centro = caja.getCenter(new THREE.Vector3()).multiplyScalar(escala);
+        modeloSol.position.sub(centro);
+
+        group.add(modeloSol);
+      },
+      undefined,
+      (err) => console.error('Failed to load sun.glb:', err)
+    );
+  }
+
+  return {
+    ...sunSpec,
+    group,
+    basePos,
+    posVec: group.position,
+    haloSol,
+  };
+}
+
+function createPlanet(scene, gltfLoader, spec) {
+  const group = new THREE.Group();
+  const basePos = new THREE.Vector3(...spec.pos);
+  group.position.copy(basePos);
+  if (spec.tilt) group.rotation.z = spec.tilt;
+  scene.add(group);
+
+  const procTex = spec.textureOpts ? createProceduralPlanetTexture(spec.textureOpts) : null;
   const fallback = new THREE.Mesh(
-    new THREE.SphereGeometry(spec.radius, 32, 32),
-    new THREE.MeshStandardMaterial({ color: spec.fallbackColor, roughness: 0.82 })
+    new THREE.SphereGeometry(spec.radius, 36, 36),
+    new THREE.MeshStandardMaterial({
+      color: procTex ? 0xffffff : spec.fallbackColor,
+      map: procTex,
+      roughness: 0.8,
+      metalness: 0.04,
+    })
   );
   group.add(fallback);
 
@@ -116,22 +318,53 @@ function createPlanet(scene, gltfLoader, spec) {
     group.add(halo);
   }
 
-  let captureRing = null;
-  let ringMaterial = null;
-  if (spec.showCaptureRing) {
-    ringMaterial = new THREE.MeshBasicMaterial({
-      color: spec.ringColor ?? 0x2ec4b6,
-      transparent: true,
-      opacity: 0.35,
-      side: THREE.DoubleSide,
-    });
-    captureRing = new THREE.Mesh(
-      new THREE.RingGeometry(spec.radius * 1.3, spec.radius * 1.37, 64),
-      ringMaterial
+  if (spec.rings) {
+    const ringGeo = new THREE.RingGeometry(spec.rings.innerRadius, spec.rings.outerRadius, 96);
+    const posAttr = ringGeo.attributes.position;
+    const uvAttr = ringGeo.attributes.uv;
+    const v3 = new THREE.Vector3();
+
+    for (let i = 0; i < posAttr.count; i++) {
+      v3.fromBufferAttribute(posAttr, i);
+      const u =
+        (v3.length() - spec.rings.innerRadius) /
+        (spec.rings.outerRadius - spec.rings.innerRadius);
+      uvAttr.setXY(i, u, 0.5);
+    }
+
+    const ringMesh = new THREE.Mesh(
+      ringGeo,
+      new THREE.MeshStandardMaterial({
+        map: createRingTexture(spec.rings.colorStops),
+        side: THREE.DoubleSide,
+        transparent: true,
+        roughness: 0.65,
+        metalness: 0.1,
+      })
     );
-    captureRing.rotation.x = Math.PI * 0.36;
-    captureRing.rotation.y = 0.25;
-    group.add(captureRing);
+    ringMesh.rotation.x = Math.PI / 2;
+    group.add(ringMesh);
+  }
+
+  let moonsPivot = null;
+  if (spec.hasMartianMoons) {
+    moonsPivot = new THREE.Group();
+    moonsPivot.position.copy(basePos);
+    scene.add(moonsPivot);
+
+    const phobos = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(2.2, 1),
+      new THREE.MeshStandardMaterial({ color: 0x7a6e67, roughness: 0.95 })
+    );
+    phobos.position.set(spec.radius + 18, 5, 0);
+    moonsPivot.add(phobos);
+
+    const deimos = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(1.4, 1),
+      new THREE.MeshStandardMaterial({ color: 0x8d8279, roughness: 0.95 })
+    );
+    deimos.position.set(-(spec.radius + 32), -8, 12);
+    moonsPivot.add(deimos);
   }
 
   if (spec.urlGLB) {
@@ -148,7 +381,7 @@ function createPlanet(scene, gltfLoader, spec) {
             mat.side = THREE.DoubleSide;
             if (mat.metalness !== undefined) {
               mat.metalness = 0.0;
-              mat.roughness = 0.82;
+              mat.roughness = 0.8;
             }
             const nombre = hijo.name.toLowerCase();
             if ((nombre.includes('cloud') || nombre.includes('atmos')) && !mat.map) {
@@ -176,9 +409,10 @@ function createPlanet(scene, gltfLoader, spec) {
   return {
     ...spec,
     group,
-    posVec,
-    captureRing,
-    ringMaterial,
+    basePos,
+    posVec: group.position,
+    moonsPivot,
+    currentScale: 1,
   };
 }
 
@@ -201,11 +435,9 @@ function getRelativeCue(ship, targetPos) {
   return `<span class="hud-dim">${parts.join(' ')}</span>`;
 }
 
-/**
- * Starts an interactive open-space planetary transit mission inside `#juego`.
- * Supports multiple simultaneous landable target bodies (Moon & Mars) and
- * spawning cleanly outside any departed body (`?from=moon` / `?from=mars`).
- */
+// ==========================================
+// 3. LANZADOR DE LA MISIÓN DE TRÁNSITO
+// ==========================================
 export function launchTransitMission(config) {
   if (!viewport) return;
 
@@ -219,33 +451,82 @@ export function launchTransitMission(config) {
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(0x010106);
 
-  const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 4000);
+  const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 45000);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   contenedor.appendChild(renderer.domElement);
   observeViewportSize(renderer, camara, contenedor);
 
-  escena.add(new THREE.AmbientLight(0xe6ecf5, 1.45));
-  const sol = new THREE.DirectionalLight(0xf6efe4, 3.0);
-  sol.position.set(300, 150, 250);
-  escena.add(sol);
-
-  escena.add(
-    createStarLayer(4000, 3500, 1.2, 0xe6ecf5, 0.8),
-    createStarLayer(1200, 2500, 2.2, 0xaaccff, 0.9),
-    createStarLayer(600, 2000, 2.8, 0xffddaa, 1.0)
-  );
-
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath(DRACO_DECODER_URL);
   const cargador = new GLTFLoader();
   cargador.setDRACOLoader(dracoLoader);
 
+  // Sol con su modelo /assets/games/sun.glb
+  const sunObj = config.sun ? createSun(escena, cargador, config.sun) : null;
+
+  escena.add(new THREE.AmbientLight(0xffffff, 1.4));
+  const solLuz = new THREE.DirectionalLight(0xfff5e6, 3.0);
+  solLuz.position.set(300, 150, 250);
+  escena.add(solLuz);
+
+  // Estrellas y planetas lejanos
+  escena.add(
+    createStarLayer(5000, 26000, 2.2, 0xffffff, 0.8),
+    createStarLayer(1600, 22000, 3.5, 0xaaccff, 0.9),
+    createStarLayer(800, 18000, 4.2, 0xffddaa, 1.0),
+    crearPlanetasLejanos(220, 4800, 14000)
+  );
+
+  // Todos los planetas (jugables y del Sistema Solar)
   const bodies = config.bodies.map((spec) => createPlanet(escena, cargador, spec));
   const targets = bodies.filter((b) => b.role === 'target');
+  const playableBodies = bodies.filter((b) => b.role === 'target' || b.role === 'origin');
+  const solarSystemBodies = bodies.filter((b) => b.role === 'solar_system');
   const getBody = (id) => bodies.find((b) => b.id === id);
 
+  // Muy pocos meteoritos (8 en total)
+  const CANTIDAD_ASTEROIDES = config.asteroidCount ?? 8;
+  const geoAsteroide = new THREE.IcosahedronGeometry(1, 1);
+  const matAsteroide = new THREE.MeshStandardMaterial({
+    color: 0x7c756e,
+    roughness: 0.92,
+    metalness: 0.08,
+    flatShading: true,
+  });
+  const mallaAsteroides = new THREE.InstancedMesh(geoAsteroide, matAsteroide, CANTIDAD_ASTEROIDES);
+  const datosAsteroides = [];
+  const matrizTemp = new THREE.Matrix4();
+  const quatTemp = new THREE.Quaternion();
+  const escTemp = new THREE.Vector3();
+
+  for (let i = 0; i < CANTIDAD_ASTEROIDES; i++) {
+    const pos = new THREE.Vector3(
+      (Math.random() - 0.5) * 900,
+      (Math.random() - 0.5) * 350,
+      -350 - Math.random() * 900
+    );
+    for (const pb of playableBodies) {
+      if (pos.distanceTo(pb.basePos) < pb.radius + 95) {
+        pos.x += 180;
+      }
+    }
+    const radio = 2.0 + Math.random() * 3.5;
+    quatTemp.setFromEuler(
+      new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
+    );
+    escTemp.set(radio, radio * 0.85, radio * 1.1);
+    matrizTemp.compose(pos, quatTemp, escTemp);
+    mallaAsteroides.setMatrixAt(i, matrizTemp);
+    datosAsteroides.push({ posicion: pos, radio });
+  }
+  mallaAsteroides.instanceMatrix.needsUpdate = true;
+  escena.add(mallaAsteroides);
+
+  // ==========================================
+  // 4. NAVE Y PROPULSORES DOBLES
+  // ==========================================
   const nave = new THREE.Group();
   const modeloVisualNave = new THREE.Group();
   nave.add(modeloVisualNave);
@@ -256,18 +537,31 @@ export function launchTransitMission(config) {
 
   const cuerpoTemporal = new THREE.Mesh(
     new THREE.ConeGeometry(1, 3.5, 12).rotateX(-Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0xd6dfec, metalness: 0.4, roughness: 0.3 })
+    new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.4, roughness: 0.3 })
   );
   modeloVisualNave.add(cuerpoTemporal);
 
-  const defaultFlameColor = config.cruiseFlameColor ?? 0x2ec4b6;
+  const defaultFlameColor = config.cruiseFlameColor ?? 0xff7711;
   const flameMaterial = new THREE.MeshBasicMaterial({ color: defaultFlameColor });
-  const fuego = new THREE.Mesh(
-    new THREE.ConeGeometry(0.55, 2.2, 8).rotateX(Math.PI / 2),
+
+  const grupoPropulsores = new THREE.Group();
+  grupoPropulsores.position.z = 2.2;
+  grupoPropulsores.visible = false;
+  modeloVisualNave.add(grupoPropulsores);
+
+  const fuegoIzq = new THREE.Mesh(
+    new THREE.ConeGeometry(0.24, 1.1, 8).rotateX(Math.PI / 2),
     flameMaterial
   );
-  fuego.position.z = 2.4;
-  modeloVisualNave.add(fuego);
+  fuegoIzq.position.set(-0.72, 0, 0.55);
+  grupoPropulsores.add(fuegoIzq);
+
+  const fuegoDer = new THREE.Mesh(
+    new THREE.ConeGeometry(0.24, 1.1, 8).rotateX(Math.PI / 2),
+    flameMaterial
+  );
+  fuegoDer.position.set(0.72, 0, 0.55);
+  grupoPropulsores.add(fuegoDer);
 
   cargador.load(
     withBase('/assets/games/spaceship.glb'),
@@ -303,21 +597,27 @@ export function launchTransitMission(config) {
   Object.assign(flashEntrada.style, {
     position: 'absolute',
     inset: '0',
-    background: 'radial-gradient(circle, rgba(46, 196, 182, 0.5), #090d16 78%)',
+    background: 'radial-gradient(circle, #ffaa44, #d9381e)',
     opacity: '0',
     pointerEvents: 'none',
-    transition: 'opacity 0.55s ease',
+    transition: 'opacity 0.5s ease',
     zIndex: '10',
   });
   contenedor.appendChild(flashEntrada);
 
+  // ==========================================
+  // 5. FÍSICA DE DESACELERACIÓN MEJORADA Y CÁMARA
+  // ==========================================
   const urlParams = new URLSearchParams(window.location.search);
   const departedFrom = urlParams.get('from');
 
   let estado = 'volando';
-  let velocidad = 0;
+  const vectorVelocidad = new THREE.Vector3(0, 0, 0);
+  const velocidadAngular = new THREE.Vector3(0, 0, 0);
+  let velocidadEntrada = 0;
   let redirigiendo = false;
-  let failedBody = null;
+  let failedTitle = '';
+  let failedBodyText = '';
   let capturingBody = null;
   let selectedTargetId =
     departedFrom === 'moon'
@@ -326,11 +626,25 @@ export function launchTransitMission(config) {
         ? 'moon'
         : config.initialTarget ?? targets[0]?.id ?? 'mars';
   let autopilot = false;
+  let cameraModeIdx = 0;
   let elapsedAnim = 0;
   let departureBannerTimer = 0;
 
+  // Parámetros ajustados para aceleración y desaceleración mucho más responsiva
+  const VELOCIDAD_MAXIMA = 310;
+  const EMPUJE_PRINCIPAL = 135;
+  const EMPUJE_FRENADO = 240; // Frenado potente con [S]
+  const FRICCION_FRENADO = 4.2;
+  const FRICCION_INERCIAL = 1.65; // Desaceleración suave al soltar [W]
+
   const steerDummy = new THREE.Object3D();
   const prevForward = new THREE.Vector3();
+  const dirFrente = new THREE.Vector3();
+  const velDeseada = new THREE.Vector3();
+  const camFocusPoint = new THREE.Vector3();
+  const idealLookAt = new THREE.Vector3();
+  const idealCamPos = new THREE.Vector3();
+  const upVector = new THREE.Vector3(0, 1, 0);
 
   function selectTarget(targetId) {
     if (!targets.some((b) => b.id === targetId)) return;
@@ -349,46 +663,60 @@ export function launchTransitMission(config) {
           : null;
 
     if (originBody && altTarget) {
-      const dir = altTarget.posVec.clone().sub(originBody.posVec).normalize();
-      const offsetDist = originBody.radius + (originBody.triggerDistance ?? 32) + 42;
-      nave.position.copy(originBody.posVec).addScaledVector(dir, offsetDist);
-      nave.lookAt(altTarget.posVec);
+      const dir = altTarget.basePos.clone().sub(originBody.basePos).normalize();
+      const offsetDist = originBody.radius * (originBody.maxProximityScale ?? 1.5) + 60;
+      nave.position.copy(originBody.basePos).addScaledVector(dir, offsetDist);
+      nave.lookAt(altTarget.basePos);
       nave.rotateY(Math.PI);
 
       const camBack = dir.clone().multiplyScalar(-12);
-      camara.position.copy(nave.position).add(camBack).add(new THREE.Vector3(0, 3.5, 0));
-      velocidad = 45;
+      camara.position.copy(nave.position).add(camBack).add(new THREE.Vector3(0, 3.3, 0));
+      camFocusPoint.copy(nave.position).addScaledVector(dir, 14);
+      vectorVelocidad.copy(dir).multiplyScalar(55);
       departureBannerTimer = 3.2;
       selectedTargetId = altTarget.id;
     } else {
       nave.position.set(0, 0, 0);
       nave.rotation.set(0, 0, 0);
-      velocidad = 0;
+      vectorVelocidad.set(0, 0, 0);
       departureBannerTimer = 0;
-      camara.position.set(0, 3.5, 12);
+      camara.position.set(0, 3.3, 11.8);
+      camFocusPoint.set(0, 0, -16);
       selectedTargetId = config.initialTarget ?? targets[0]?.id ?? 'mars';
     }
 
+    velocidadAngular.set(0, 0, 0);
     emitTargetChanged(selectedTargetId);
   }
 
   function reiniciar() {
     modeloVisualNave.rotation.set(0, 0, 0);
     estado = 'volando';
-    failedBody = null;
+    failedTitle = '';
+    failedBodyText = '';
     capturingBody = null;
     redirigiendo = false;
     autopilot = false;
     elapsedAnim = 0;
     flameMaterial.color.setHex(defaultFlameColor);
-    fuego.scale.set(1, 1, 1);
-    fuego.visible = false;
+    fuegoIzq.scale.set(1, 1, 1);
+    fuegoDer.scale.set(1, 1, 1);
+    grupoPropulsores.visible = false;
     flashEntrada.style.opacity = '0';
-    camara.fov = 60;
+    camara.fov = CAMERA_MODES[cameraModeIdx].baseFov;
+    camara.up.set(0, 1, 0);
     camara.updateProjectionMatrix();
+
+    for (const b of playableBodies) {
+      b.currentScale = 1;
+      b.group.scale.setScalar(1);
+      if (b.moonsPivot) b.moonsPivot.scale.setScalar(1);
+    }
+
     applySpawnState();
     hud.setStatus('');
   }
+
   reiniciar();
   onMissionRestart(reiniciar);
   onSelectTarget((target) => selectTarget(target));
@@ -404,6 +732,8 @@ export function launchTransitMission(config) {
     'KeyA',
     'KeyS',
     'KeyD',
+    'KeyV',
+    'KeyC',
     'Tab',
   ];
 
@@ -424,6 +754,9 @@ export function launchTransitMission(config) {
         }
         if (e.code === 'KeyG' || k === 'g') {
           autopilot = !autopilot;
+        }
+        if (e.code === 'KeyV' || k === 'v' || e.code === 'KeyC' || k === 'c') {
+          cameraModeIdx = (cameraModeIdx + 1) % CAMERA_MODES.length;
         }
       }
 
@@ -459,17 +792,35 @@ export function launchTransitMission(config) {
     if (departureBannerTimer > 0) departureBannerTimer = Math.max(0, departureBannerTimer - dt);
 
     const lockedTarget = getBody(selectedTargetId) ?? targets[0];
+    const camPreset = CAMERA_MODES[cameraModeIdx];
 
+    // Animar el Sol
+    if (sunObj) {
+      sunObj.group.rotation.y += 0.02 * dt;
+      const pulsoSol = 1 + Math.sin(elapsedAnim * 2) * 0.03;
+      sunObj.haloSol.scale.setScalar(pulsoSol);
+    }
+
+    // Rotación planetaria, paralaje lejano y CRECIMIENTO DINÁMICO al acercarse
     for (const b of bodies) {
-      b.group.rotation.y += b.rotSpeed * dt;
-      if (b.captureRing && b.ringMaterial) {
-        b.captureRing.rotation.z += 0.35 * dt;
-        const isLocked = b.id === selectedTargetId;
-        const pulse = isLocked
-          ? 1.02 + Math.sin(elapsedAnim * 3.8) * 0.055
-          : 0.98 + Math.sin(elapsedAnim * 2.1) * 0.02;
-        b.captureRing.scale.setScalar(pulse);
-        b.ringMaterial.opacity = isLocked ? 0.72 : 0.26;
+      b.group.rotation.y += (b.rotSpeed ?? 0.06) * dt;
+      if (b.moonsPivot) {
+        b.moonsPivot.rotation.y += 0.35 * dt;
+      }
+      if (b.role === 'solar_system') {
+        b.group.position.copy(b.basePos).addScaledVector(nave.position, 0.94);
+      } else if (b.maxProximityScale && b.proximityRange) {
+        const centerDist = nave.position.distanceTo(b.posVec);
+        const proxNorm = THREE.MathUtils.clamp(
+          1 - (centerDist - b.radius) / b.proximityRange,
+          0,
+          1
+        );
+        // Curva suave para que el planeta se agrande notablemente cuando te acercas
+        const targetScale = 1 + (b.maxProximityScale - 1) * (proxNorm * proxNorm);
+        b.currentScale = THREE.MathUtils.lerp(b.currentScale, targetScale, 1 - Math.exp(-6 * dt));
+        b.group.scale.setScalar(b.currentScale);
+        if (b.moonsPivot) b.moonsPivot.scale.setScalar(b.currentScale);
       }
     }
 
@@ -497,97 +848,201 @@ export function launchTransitMission(config) {
         steerDummy.position.copy(nave.position);
         steerDummy.lookAt(lockedTarget.posVec);
         steerDummy.rotateY(Math.PI);
-        nave.quaternion.slerp(steerDummy.quaternion, 2.4 * dt);
+        nave.quaternion.slerp(steerDummy.quaternion, 1 - Math.exp(-3.2 * dt));
 
         const targetForward = new THREE.Vector3(0, 0, -1).applyQuaternion(steerDummy.quaternion);
-        const turnRoll = THREE.MathUtils.clamp(prevForward.cross(targetForward).y * 3.5, -0.45, 0.45);
+        const turnRoll = THREE.MathUtils.clamp(
+          prevForward.cross(targetForward).y * 3.8,
+          -0.48,
+          0.48
+        );
         modeloVisualNave.rotation.z = THREE.MathUtils.lerp(
           modeloVisualNave.rotation.z,
           turnRoll,
-          6 * dt
+          1 - Math.exp(-8 * dt)
+        );
+        modeloVisualNave.rotation.x = THREE.MathUtils.lerp(
+          modeloVisualNave.rotation.x,
+          0,
+          1 - Math.exp(-8 * dt)
         );
 
-        velocidad = Math.min(velocidad + 70 * dt, 135);
-        fuego.visible = true;
-        fuego.scale.set(1, 1, 0.85 + Math.random() * 0.55);
+        nave.getWorldDirection(dirFrente).negate();
+        const rapidezObjetivo = Math.min(vectorVelocidad.length() + 115 * dt, 230);
+        vectorVelocidad.copy(dirFrente).multiplyScalar(rapidezObjetivo);
+
+        grupoPropulsores.visible = true;
+        fuegoIzq.scale.z = 0.85 + Math.random() * 0.6;
+        fuegoDer.scale.z = 0.85 + Math.random() * 0.6;
       } else {
         const acelerando = teclas['KeyW'] || teclas['w'] || teclas['Space'];
         const frenando = teclas['KeyS'] || teclas['s'];
 
-        if (acelerando) {
-          velocidad = Math.min(velocidad + 75 * dt, 150);
-          fuego.visible = true;
-          fuego.scale.set(1, 1, 0.8 + Math.random() * 0.6);
-        } else if (frenando) {
-          velocidad = Math.max(velocidad - 75 * dt, -35);
-          fuego.visible = false;
+        const acelAngular = 3.8;
+        let inputYaw = 0;
+        let inputPitch = 0;
+
+        if (teclas['ArrowLeft'] || teclas['KeyA'] || teclas['a']) inputYaw += 1;
+        if (teclas['ArrowRight'] || teclas['KeyD'] || teclas['d']) inputYaw -= 1;
+        if (teclas['ArrowUp'] || teclas['KeyI']) inputPitch += 1;
+        if (teclas['ArrowDown'] || teclas['KeyK']) inputPitch -= 1;
+
+        if (inputYaw !== 0) {
+          velocidadAngular.y = THREE.MathUtils.clamp(
+            velocidadAngular.y + inputYaw * acelAngular * dt,
+            -1.85,
+            1.85
+          );
         } else {
-          velocidad *= 0.985;
-          if (Math.abs(velocidad) < 0.1) velocidad = 0;
-          fuego.visible = false;
+          velocidadAngular.y *= Math.exp(-10 * dt);
+          if (Math.abs(velocidadAngular.y) < 0.004) velocidadAngular.y = 0;
         }
 
-        const velGiro = 1.8;
-        let giroY = 0;
-        let giroX = 0;
+        if (inputPitch !== 0) {
+          velocidadAngular.x = THREE.MathUtils.clamp(
+            velocidadAngular.x + inputPitch * acelAngular * dt,
+            -1.75,
+            1.75
+          );
+        } else {
+          velocidadAngular.x *= Math.exp(-10 * dt);
+          if (Math.abs(velocidadAngular.x) < 0.004) velocidadAngular.x = 0;
+        }
 
-        if (teclas['ArrowLeft'] || teclas['KeyA'] || teclas['a']) giroY += 1;
-        if (teclas['ArrowRight'] || teclas['KeyD'] || teclas['d']) giroY -= 1;
-        if (teclas['ArrowUp'] || teclas['KeyI']) giroX += 1;
-        if (teclas['ArrowDown'] || teclas['KeyK']) giroX -= 1;
+        nave.rotateY(velocidadAngular.y * dt);
+        nave.rotateX(velocidadAngular.x * dt);
 
-        nave.rotateY(giroY * velGiro * dt);
-        nave.rotateX(giroX * velGiro * dt);
-
-        const inclinacionObjetivo = giroY * 0.45;
+        // Inclinación visual dinámica (bank + pitch) de la nave
+        const inclinacionZ = velocidadAngular.y * 0.38;
+        const inclinacionX = -velocidadAngular.x * 0.16;
         modeloVisualNave.rotation.z = THREE.MathUtils.lerp(
           modeloVisualNave.rotation.z,
-          inclinacionObjetivo,
-          8 * dt
+          inclinacionZ,
+          1 - Math.exp(-9 * dt)
         );
+        modeloVisualNave.rotation.x = THREE.MathUtils.lerp(
+          modeloVisualNave.rotation.x,
+          inclinacionX,
+          1 - Math.exp(-9 * dt)
+        );
+
+        nave.getWorldDirection(dirFrente).negate();
+
+        if (acelerando) {
+          vectorVelocidad.addScaledVector(dirFrente, EMPUJE_PRINCIPAL * dt);
+          // Alinear progresivamente el vector de velocidad hacia la proa para evitar derrapes
+          const rapidez = Math.min(vectorVelocidad.length(), VELOCIDAD_MAXIMA);
+          velDeseada.copy(dirFrente).multiplyScalar(rapidez);
+          vectorVelocidad.lerp(velDeseada, 1 - Math.exp(-5.5 * dt));
+
+          grupoPropulsores.visible = true;
+          fuegoIzq.scale.z = 0.85 + Math.random() * 0.6;
+          fuegoDer.scale.z = 0.85 + Math.random() * 0.6;
+        } else if (frenando) {
+          // Desaceleración activa mejorada: combina amortiguación exponencial + empuje inverso
+          vectorVelocidad.multiplyScalar(Math.exp(-FRICCION_FRENADO * dt));
+          const rapidezActual = vectorVelocidad.length();
+          if (rapidezActual > 0) {
+            const nuevaRapidez = Math.max(rapidezActual - EMPUJE_FRENADO * dt, 0);
+            vectorVelocidad.setLength(nuevaRapidez);
+          }
+          grupoPropulsores.visible = false;
+        } else {
+          // Desaceleración pasiva suave al soltar el acelerador
+          vectorVelocidad.multiplyScalar(Math.exp(-FRICCION_INERCIAL * dt));
+          const rapidezActual = vectorVelocidad.length();
+          if (rapidezActual > 0) {
+            const nuevaRapidez = Math.max(rapidezActual - 18 * dt, 0);
+            if (nuevaRapidez < 0.25) {
+              vectorVelocidad.set(0, 0, 0);
+            } else {
+              velDeseada.copy(dirFrente).multiplyScalar(nuevaRapidez);
+              vectorVelocidad.lerp(velDeseada, 1 - Math.exp(-4.0 * dt));
+              vectorVelocidad.setLength(nuevaRapidez);
+            }
+          }
+          grupoPropulsores.visible = false;
+        }
       }
 
-      nave.translateZ(-velocidad * dt);
+      nave.position.addScaledVector(vectorVelocidad, dt);
 
-      const distances = bodies.map((b) => ({
-        body: b,
-        dist: Math.max(0, nave.position.distanceTo(b.posVec) - b.radius),
-      }));
-
-      for (const entry of distances) {
-        const b = entry.body;
-        if (b.role === 'target' && entry.dist < (b.triggerDistance ?? 32)) {
-          estado = 'acelerando_destino';
-          capturingBody = b;
-          autopilot = false;
-          selectedTargetId = b.id;
-          emitTargetChanged(b.id);
-          modeloVisualNave.rotation.z = 0;
-          flameMaterial.color.setHex(b.captureFlameColor ?? defaultFlameColor);
-          flashEntrada.style.background =
-            b.captureFlashGradient ??
-            'radial-gradient(circle, rgba(46, 196, 182, 0.5), #090d16 78%)';
-          nave.lookAt(b.posVec);
-          nave.rotateY(Math.PI);
-          break;
-        }
-        if (b.role === 'origin' && entry.dist < (b.abortDistance ?? 10)) {
+      // Límite de calor solar (Sol)
+      if (sunObj) {
+        const distSol = nave.position.distanceTo(sunObj.posVec) - sunObj.radius;
+        if (distSol < (sunObj.dangerDistance ?? 950)) {
           estado = 'fallo';
-          failedBody = b;
+          failedTitle = 'CRITICAL HEAT WARNING';
+          failedBodyText = 'Solar radiation exceeded hull limits — you cannot approach the Sun.';
           autopilot = false;
-          velocidad = 0;
-          fuego.visible = false;
-          break;
+          vectorVelocidad.set(0, 0, 0);
+          grupoPropulsores.visible = false;
+          flashEntrada.style.background = 'radial-gradient(circle, #ffaa44, #d9381e)';
+          flashEntrada.style.opacity = '0.45';
         }
       }
 
-      const distanceSummary = distances
+      // Colisión con los 8 meteoritos
+      if (estado === 'volando') {
+        for (let i = 0; i < CANTIDAD_ASTEROIDES; i++) {
+          const ast = datosAsteroides[i];
+          if (nave.position.distanceToSquared(ast.posicion) < (ast.radio + 1.8) ** 2) {
+            estado = 'fallo';
+            failedTitle = 'METEORITE IMPACT';
+            failedBodyText = 'Your spacecraft collided with a meteorite.';
+            autopilot = false;
+            vectorVelocidad.set(0, 0, 0);
+            grupoPropulsores.visible = false;
+            break;
+          }
+        }
+      }
+
+      // Distancias a la superficie escalada de los mundos jugables (Marte, Luna, Tierra)
+      const distances = playableBodies.map((b) => {
+        const effectiveRadius = b.radius * (b.currentScale ?? 1);
+        return {
+          body: b,
+          effectiveRadius,
+          dist: Math.max(0, nave.position.distanceTo(b.posVec) - effectiveRadius),
+        };
+      });
+
+      if (estado === 'volando') {
+        for (const entry of distances) {
+          const b = entry.body;
+          if (b.role === 'target' && entry.dist < (b.triggerDistance ?? 40)) {
+            estado = 'acelerando_destino';
+            capturingBody = b;
+            autopilot = false;
+            velocidadEntrada = Math.max(vectorVelocidad.length(), 145);
+            selectedTargetId = b.id;
+            emitTargetChanged(b.id);
+            modeloVisualNave.rotation.set(0, 0, 0);
+            flameMaterial.color.setHex(b.captureFlameColor ?? defaultFlameColor);
+            flashEntrada.style.background =
+              b.captureFlashGradient ?? 'radial-gradient(circle, #ffaa44, #d9381e)';
+            nave.lookAt(b.posVec);
+            nave.rotateY(Math.PI);
+            break;
+          }
+          if (b.role === 'origin' && entry.dist < (b.abortDistance ?? 15)) {
+            estado = 'fallo';
+            failedTitle = b.failTitle;
+            failedBodyText = b.failBody;
+            autopilot = false;
+            vectorVelocidad.set(0, 0, 0);
+            grupoPropulsores.visible = false;
+            break;
+          }
+        }
+      }
+
+      const mainDistancesHtml = distances
         .slice()
         .sort((a, b) => {
           if (a.body.id === selectedTargetId) return -1;
           if (b.body.id === selectedTargetId) return 1;
-          if (a.body.role === 'target' && b.body.role !== 'target') return -1;
-          if (b.body.role === 'target' && a.body.role !== 'target') return 1;
           return 0;
         })
         .map((d) => {
@@ -596,14 +1051,20 @@ export function launchTransitMission(config) {
         })
         .join(' &middot; ');
 
+      const solarDistancesHtml = solarSystemBodies
+        .map((b) => `${b.label} ${b.realDistanceMkm}M km`)
+        .join(' &middot; ');
+
+      const rapidez = vectorVelocidad.length();
       const cue = lockedTarget ? getRelativeCue(nave, lockedTarget.posVec) : '';
       const autoLabel = autopilot ? ' <span class="hud-ok">[AUTO]</span>' : '';
 
       hud.setTelemetry(`
-        <span class="game-hud__title">Target: ${lockedTarget?.label ?? 'Orbit'}${autoLabel} &middot; Fly to Moon or Mars</span>
-        ${distanceSummary}<br>
-        Speed ${velocidad.toFixed(0)} km/s${cue ? ` &middot; Heading ${cue}` : ''}
-        <span class="game-hud__controls">[W / Space] Thrust &middot; [S] Brake &middot; [A / D / &larr; &rarr;] Turn &middot; [&uarr; &darr;] Pitch &middot; [1] Moon &middot; [2] Mars &middot; [G] Auto-cruise</span>
+        <span class="game-hud__title">Target: ${lockedTarget?.label ?? 'Mars'}${autoLabel} &middot; View: ${camPreset.name}</span>
+        ${mainDistancesHtml}<br>
+        <span class="hud-dim" style="font-size:0.86em;">Solar System: ${solarDistancesHtml}</span><br>
+        Speed ${rapidez.toFixed(0)} km/s${cue ? ` &middot; Heading ${cue}` : ''}
+        <span class="game-hud__controls">[W / Space] Thrust &middot; [S] Brake &middot; [A / D / &larr; &rarr;] Yaw &middot; [&uarr; &darr;] Pitch &middot; [V] Camera &middot; [1] Moon &middot; [2] Mars &middot; [G] Auto</span>
       `);
 
       if (departureBannerTimer > 0 && departedFrom) {
@@ -612,58 +1073,105 @@ export function launchTransitMission(config) {
           <span class="hud-ok"><b>ORBIT ACHIEVED</b></span><br>
           Departed ${departedName}. Steer to ${lockedTarget?.label ?? 'your next target'} or press <b>[ G ]</b> for auto-cruise.
         `);
-      } else {
+      } else if (estado === 'volando') {
         hud.setStatus('');
       }
-    } else if (estado === 'fallo' && failedBody) {
+    } else if (estado === 'fallo') {
       hud.setStatus(`
-        <span class="hud-danger"><b>${failedBody.failTitle}</b></span><br>
-        ${failedBody.failBody}<br>
-        Press <b>[ R ]</b> or hit <b>Restart</b> to try again.
+        <span class="hud-danger"><b>${failedTitle}</b></span><br>
+        ${failedBodyText}<br>
+        Press <b>[ R ]</b> or hit <b>Restart</b> to launch again.
       `);
     } else if (estado === 'acelerando_destino' && capturingBody) {
-      velocidad += 350 * dt;
-      nave.translateZ(-velocidad * dt);
+      velocidadEntrada += 350 * dt;
+      nave.translateZ(-velocidadEntrada * dt);
 
       if (camara.fov < 115) {
         camara.fov += 90 * dt;
         camara.updateProjectionMatrix();
       }
 
-      fuego.visible = true;
-      fuego.scale.set(1.5, 1.5, 4 + Math.random() * 2);
+      grupoPropulsores.visible = true;
+      fuegoIzq.scale.set(1.3, 1.3, 3 + Math.random() * 1.5);
+      fuegoDer.scale.set(1.3, 1.3, 3 + Math.random() * 1.5);
 
       hud.setStatus(`
         <span class="hud-warning"><b>${capturingBody.captureStatusTitle}</b></span><br>
         ${capturingBody.captureStatusBody}
       `);
 
+      const effectiveTransition =
+        (capturingBody.transitionRadius ?? capturingBody.radius) *
+        (capturingBody.currentScale ?? 1);
       const centerDist = nave.position.distanceTo(capturingBody.posVec);
-      if (centerDist < (capturingBody.transitionRadius ?? capturingBody.radius) && !redirigiendo) {
+      if (centerDist < effectiveTransition && !redirigiendo) {
         redirigiendo = true;
         flashEntrada.style.opacity = '1';
         setTimeout(() => {
           window.location.href = withBase(capturingBody.nextRoute);
-        }, 550);
+        }, 500);
       }
     }
 
-    speedStreaks.update(
-      dt,
-      estado === 'volando' || estado === 'acelerando_destino' ? velocidad : 0
-    );
+    const rapidezActual =
+      estado === 'acelerando_destino'
+        ? velocidadEntrada
+        : estado === 'volando'
+          ? vectorVelocidad.length()
+          : 0;
+    speedStreaks.update(dt, rapidezActual);
 
+    // ==========================================
+    // 6. MOVIMIENTO DE CÁMARA CINEMÁTICO MEJORADO
+    // ==========================================
     if (estado === 'volando' || estado === 'acelerando_destino') {
       nave.updateMatrixWorld();
-      const offsetCamara = new THREE.Vector3(0, 3.5, 12).applyMatrix4(nave.matrixWorld);
-      camara.position.lerp(offsetCamara, 0.15);
 
-      if (estado === 'acelerando_destino') {
-        camara.position.x += (Math.random() - 0.5) * 0.5;
-        camara.position.y += (Math.random() - 0.5) * 0.5;
+      // Desplazamiento dinámico según velocidad y giro para sensación de peso
+      const speedNorm = THREE.MathUtils.clamp(rapidezActual / VELOCIDAD_MAXIMA, 0, 1.2);
+      idealCamPos
+        .copy(camPreset.offset)
+        .add(
+          new THREE.Vector3(
+            -velocidadAngular.y * 1.35,
+            velocidadAngular.x * 0.75,
+            speedNorm * 1.8
+          )
+        )
+        .applyMatrix4(nave.matrixWorld);
+
+      const posSmoothing = 1 - Math.exp(-11 * dt);
+      camara.position.lerp(idealCamPos, posSmoothing);
+
+      // Punto de enfoque adelantado (Look-Ahead) frente a la proa de la nave
+      idealLookAt
+        .set(
+          -velocidadAngular.y * 2.8,
+          0.65 - velocidadAngular.x * 2.2,
+          -camPreset.lookAhead
+        )
+        .applyMatrix4(nave.matrixWorld);
+
+      const lookSmoothing = 1 - Math.exp(-15 * dt);
+      camFocusPoint.lerp(idealLookAt, lookSmoothing);
+
+      if (estado === 'volando') {
+        const targetFov = camPreset.baseFov + speedNorm * 14;
+        camara.fov = THREE.MathUtils.lerp(camara.fov, targetFov, 1 - Math.exp(-6 * dt));
+        camara.updateProjectionMatrix();
+
+        // Ligera inclinación del horizonte de la cámara acorde al giro
+        upVector
+          .set(-velocidadAngular.y * 0.12, 1, 0)
+          .normalize()
+          .applyQuaternion(nave.quaternion);
+        camara.up.lerp(upVector, 1 - Math.exp(-8 * dt));
+      } else if (estado === 'acelerando_destino') {
+        camara.position.x += (Math.random() - 0.5) * 0.55;
+        camara.position.y += (Math.random() - 0.5) * 0.55;
       }
 
-      camara.lookAt(nave.position);
+      camara.lookAt(camFocusPoint);
     }
 
     renderer.render(escena, camara);

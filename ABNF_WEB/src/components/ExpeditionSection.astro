@@ -1,5 +1,6 @@
 ---
 import type { Artifact } from '../lib/archive';
+import { withBase } from '../lib/base-path';
 
 interface Props {
   artifacts: Artifact[];
@@ -28,11 +29,14 @@ const expeditionCatalog = artifacts.map((artifact) => ({
   sources: artifact.sources,
   featured: artifact.featured,
 }));
+
+const vueloUrl = withBase('/vuelo');
 ---
 
 <section
   id="expedition"
   data-state="active"
+  data-vuelo-url={vueloUrl}
   class="border-b border-[var(--color-border)] bg-[var(--color-void)] py-14 sm:py-18"
   aria-labelledby="expedition-heading"
 >
@@ -84,7 +88,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
       </div>
     </div>
 
-    <!-- Main Unified 3D Viewport (Spaceflight -> Powered Landing -> Surface Rover -> Liftoff to Orbit) -->
+    <!-- Main Unified 3D Viewport (Spaceflight /vuelo -> Powered Landing -> Surface Rover -> Liftoff to Orbit) -->
     <div
       id="expedition-stage"
       data-phase="standby"
@@ -150,10 +154,10 @@ const expeditionCatalog = artifacts.map((artifact) => ({
 
           <div class="grid grid-cols-1 gap-2 pt-1 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)] sm:grid-cols-2">
             <div class="border border-[var(--color-border)] bg-[var(--color-slate)] px-3 py-2">
-              <strong class="text-[var(--color-text-primary)]">FLIGHT &amp; LANDING:</strong> W/Space Thrust &middot; WASD/Arrows Steer &middot; [1]/[2] Moon/Mars &middot; G Auto-Cruise/Land &middot; R Retry
+              <strong class="text-[var(--color-text-primary)]">FLIGHT &amp; LANDING:</strong> W/Space Thrust &middot; S Brake &middot; WASD/Arrows Steer &middot; [V] Camera &middot; [1]/[2] Moon/Mars &middot; G Auto
             </div>
             <div class="border border-[var(--color-border)] bg-[var(--color-slate)] px-3 py-2">
-              <strong class="text-[var(--color-text-primary)]">SURFACE &amp; ORBIT RETURN:</strong> Touch down -> [E] Explore Surface or [L] Launch to Orbit anytime from rover or pad
+              <strong class="text-[var(--color-text-primary)]">SURFACE &amp; ORBIT RETURN:</strong> Touch down -&gt; [E] Explore Surface or [L] Launch to Orbit anytime from rover or pad
             </div>
           </div>
         </div>
@@ -172,7 +176,52 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         </div>
       </div>
 
-      <!-- 3D Canvas (activated after Launch click) -->
+      <!-- Embedded /vuelo Simulator Layer (Full Solar System Flight + Lunar/Martian Landing) -->
+      <div
+        id="expedition-vuelo-container"
+        hidden
+        class="absolute inset-0 z-30 h-full w-full bg-[var(--color-void)]"
+      >
+        <div class="pointer-events-none absolute top-2.5 right-2.5 z-40 flex items-center gap-1.5 sm:top-3.5 sm:right-4">
+          <button
+            type="button"
+            id="vuelo-surface-mars-btn"
+            class="pointer-events-auto cursor-pointer border border-[var(--color-amber-border)] bg-[color:rgba(9,13,22,0.88)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-amber)] uppercase backdrop-blur-xs hover:border-[var(--color-amber)]"
+          >
+            Mars Rover
+          </button>
+          <button
+            type="button"
+            id="vuelo-surface-moon-btn"
+            class="pointer-events-auto cursor-pointer border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.88)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-turquoise)] uppercase backdrop-blur-xs hover:border-[var(--color-turquoise)]"
+          >
+            Moon Rover
+          </button>
+          <button
+            type="button"
+            id="vuelo-fullscreen-btn"
+            class="pointer-events-auto cursor-pointer border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.88)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase backdrop-blur-xs hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+          >
+            Fullscreen
+          </button>
+          <button
+            type="button"
+            id="vuelo-exit-btn"
+            class="pointer-events-auto cursor-pointer border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.88)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase backdrop-blur-xs hover:border-[var(--color-turquoise)] hover:text-[var(--color-text-primary)]"
+          >
+            Exit
+          </button>
+        </div>
+
+        <iframe
+          id="expedition-vuelo-frame"
+          title="Interplanetary Space Flight and Landing Simulator (/vuelo)"
+          class="h-full w-full border-0 bg-[var(--color-void)]"
+          allow="fullscreen"
+        ></iframe>
+      </div>
+
+      <!-- 3D Canvas (activated for Surface Rover Exploration) -->
       <canvas
         id="expedition-canvas"
         role="img"
@@ -329,7 +378,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         <!-- Flex spacer keeping bottom HUD panels docked without shifting projected reticle coordinates -->
         <div class="pointer-events-none flex-1" aria-hidden="true"></div>
 
-        <!-- Touchdown / Recovery Decision Card (stays inside the same 3D viewport after landing) -->
+        <!-- Touchdown / Recovery Decision Card -->
         <div
           id="hud-touchdown-card"
           hidden
@@ -574,7 +623,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
             </div>
           </div>
 
-          <!-- Hold-to-Link Symbolic Recovery (unlocked once all hotspots scanned) -->
+          <!-- Hold-to-Link Symbolic Recovery -->
           <div id="hud-hold-panel" class="flex items-center gap-2.5">
             <button
               type="button"
@@ -760,7 +809,172 @@ const expeditionCatalog = artifacts.map((artifact) => ({
   />
   <script>
     import { initExpeditionSection } from '../lib/expedition';
+
     initExpeditionSection();
+
+    // Bridge #expedition to use /vuelo for all orbital flight & powered landing phases
+    const section = document.getElementById('expedition');
+    const stage = document.getElementById('expedition-stage');
+    const standby = document.getElementById('expedition-standby');
+    const vueloContainer = document.getElementById('expedition-vuelo-container');
+    const vueloFrame = document.getElementById('expedition-vuelo-frame') as HTMLIFrameElement | null;
+    const launchBtn = document.getElementById('expedition-standby-launch-btn');
+    const fsToggle = document.getElementById('expedition-fullscreen-toggle') as HTMLInputElement | null;
+    const baseVueloUrl = section?.getAttribute('data-vuelo-url') || '/vuelo';
+
+    let currentSurfaceBody: 'mars' | 'moon' = 'mars';
+
+    function openVueloSimulator(fromBody?: 'mars' | 'moon' | null) {
+      if (!vueloContainer || !vueloFrame || !stage) return;
+
+      const targetUrl = fromBody ? `${baseVueloUrl}?from=${fromBody}` : baseVueloUrl;
+      vueloContainer.hidden = false;
+      if (standby) standby.hidden = true;
+      stage.setAttribute('data-phase', 'vuelo');
+
+      if (vueloFrame.src !== new URL(targetUrl, window.location.origin).href) {
+        vueloFrame.src = targetUrl;
+      }
+
+      if (fsToggle?.checked && document.fullscreenElement !== stage && stage.requestFullscreen) {
+        stage.requestFullscreen().catch(() => {});
+      }
+
+      setTimeout(() => {
+        vueloFrame.focus();
+        vueloFrame.contentWindow?.focus();
+      }, 80);
+    }
+
+    function closeVueloSimulator(returnToStandby = false) {
+      if (!vueloContainer || !vueloFrame || !stage) return;
+      vueloContainer.hidden = true;
+      vueloFrame.src = 'about:blank';
+      if (returnToStandby && standby) {
+        standby.hidden = false;
+        stage.setAttribute('data-phase', 'standby');
+      }
+    }
+
+    function deploySurfaceRover(body: 'mars' | 'moon') {
+      currentSurfaceBody = body;
+      closeVueloSimulator(false);
+      const deployBtn = document.querySelector(
+        `[data-expedition-deploy-body="${body}"]`
+      ) as HTMLButtonElement | null;
+      deployBtn?.click();
+    }
+
+    // Intercept main Launch button in standby so it opens /vuelo
+    launchBtn?.addEventListener(
+      'click',
+      (e) => {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        openVueloSimulator(null);
+      },
+      true
+    );
+
+    // Track which planet surface is deployed when clicking Deploy Mars / Deploy Moon
+    document.querySelectorAll('[data-expedition-deploy-body]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const body = btn.getAttribute('data-expedition-deploy-body');
+        if (body === 'mars' || body === 'moon') {
+          currentSurfaceBody = body;
+          if (vueloContainer && !vueloContainer.hidden) {
+            closeVueloSimulator(false);
+          }
+        }
+      });
+    });
+
+    // Intercept all "Launch to Orbit [L]" buttons in the surface HUD to load /vuelo?from=mars|moon
+    const orbitBtnIds = [
+      'hud-orbit-btn',
+      'hud-touchdown-orbit-btn',
+      'hud-drive-orbit-btn',
+      'hud-inspect-orbit-btn',
+      'hud-complete-orbit-btn',
+      'hud-restart-btn',
+    ];
+
+    orbitBtnIds.forEach((id) => {
+      document.getElementById(id)?.addEventListener(
+        'click',
+        (e) => {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          openVueloSimulator(currentSurfaceBody);
+        },
+        true
+      );
+    });
+
+    // Also intercept key [L] while on surface rover to return to /vuelo orbit
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!vueloContainer?.hidden) return;
+        const phase = stage?.getAttribute('data-phase');
+        if (
+          phase &&
+          phase !== 'standby' &&
+          (e.code === 'KeyL' || e.key.toLowerCase() === 'l')
+        ) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          openVueloSimulator(currentSurfaceBody);
+        }
+      },
+      true
+    );
+
+    // Quick switch & exit controls on the /vuelo overlay bar
+    document.getElementById('vuelo-surface-mars-btn')?.addEventListener('click', () => {
+      deploySurfaceRover('mars');
+    });
+
+    document.getElementById('vuelo-surface-moon-btn')?.addEventListener('click', () => {
+      deploySurfaceRover('moon');
+    });
+
+    document.getElementById('vuelo-fullscreen-btn')?.addEventListener('click', () => {
+      if (!stage) return;
+      if (document.fullscreenElement === stage) {
+        document.exitFullscreen?.().catch(() => {});
+      } else {
+        stage.requestFullscreen?.().catch(() => {});
+      }
+    });
+
+    document.getElementById('vuelo-exit-btn')?.addEventListener('click', () => {
+      closeVueloSimulator(true);
+    });
+
+    // If /aterrizaje or /aterrizaje-luna inside the iframe navigates to /?explore=mars|moon,
+    // catch it and seamlessly open the Rover on that planet
+    vueloFrame?.addEventListener('load', () => {
+      try {
+        const frameLoc = vueloFrame.contentWindow?.location;
+        if (!frameLoc || frameLoc.href === 'about:blank') return;
+        const params = new URLSearchParams(frameLoc.search);
+        const exploreBody = params.get('explore');
+        if (exploreBody === 'mars' || exploreBody === 'moon') {
+          deploySurfaceRover(exploreBody);
+        }
+      } catch {
+        // Ignore cross-origin or transitional state
+      }
+    });
+
+    // Auto-deploy if the main page was opened with ?explore=mars or ?explore=moon
+    const pageParams = new URLSearchParams(window.location.search);
+    const initialExplore = pageParams.get('explore');
+    if (initialExplore === 'mars' || initialExplore === 'moon') {
+      currentSurfaceBody = initialExplore;
+      setTimeout(() => deploySurfaceRover(initialExplore), 60);
+    }
   </script>
 </section>
 

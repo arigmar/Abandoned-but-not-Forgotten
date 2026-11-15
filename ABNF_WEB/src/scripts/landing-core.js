@@ -252,7 +252,7 @@ export function launchLandingMission(config) {
       'radial-gradient(circle, rgba(46, 196, 182, 0.45), #090d16 78%)',
     opacity: '0',
     pointerEvents: 'none',
-    transition: 'opacity 0.55s ease',
+    transition: 'opacity 0.35s ease',
     zIndex: '10',
   });
   contenedor.appendChild(ascentFlash);
@@ -270,6 +270,11 @@ export function launchLandingMission(config) {
   const GASTO = physics.fuelBurn;
   const GASTO_LATERAL = physics.lateralFuelBurn;
 
+  const isMoonMission =
+    (config.exploreRoute ?? '').includes('moon') ||
+    (config.orbitReturnRoute ?? '').includes('moon');
+  const currentBodyId = isMoonMission ? 'moon' : 'mars';
+
   let posX = 0;
   let posY = physics.startY ?? 16;
   let velX = 0;
@@ -281,10 +286,17 @@ export function launchLandingMission(config) {
   let runElapsed = 0;
   let ascentElapsed = 0;
   let ascentRedirecting = false;
+  let exploringSurface = false;
 
   function launchToOrbit(force = false) {
     if (estado === 'despegando') return;
     if (estado === 'estrellado' && !force) return;
+
+    const standaloneFrame = document.getElementById('standalone-explore-frame');
+    if (standaloneFrame) {
+      standaloneFrame.remove();
+    }
+    exploringSurface = false;
 
     if (estado === 'estrellado') {
       posY = MITAD_ALTURA;
@@ -301,6 +313,61 @@ export function launchLandingMission(config) {
     envHooks?.onAscent?.({ posX, posY });
   }
 
+  function goExploreSurface() {
+    if (exploringSurface) return;
+    exploringSurface = true;
+    ascentFlash.style.opacity = '1';
+
+    setTimeout(() => {
+      // Caso 1: Estamos dentro del simulador embebido en #expedition.
+      // Enviamos postMessage para cambiar al Rover instantáneamente SIN recargar la web.
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'expedition:explore-surface', body: currentBodyId },
+          '*'
+        );
+        return;
+      }
+
+      // Caso 2: Estamos directo en la vista grande (/vuelo o /aterrizaje).
+      // Abrimos el modo exploración en grande a pantalla completa sin redirigir a la página principal.
+      const fullExploreUrl = withBase(`/?explore=${currentBodyId}&fullscreen=1`);
+      let exploreFrame = document.getElementById('standalone-explore-frame');
+      if (!exploreFrame) {
+        exploreFrame = document.createElement('iframe');
+        exploreFrame.id = 'standalone-explore-frame';
+        Object.assign(exploreFrame.style, {
+          position: 'fixed',
+          inset: '0',
+          width: '100vw',
+          height: '100vh',
+          border: '0',
+          zIndex: '9999',
+          background: '#090d16',
+        });
+        exploreFrame.setAttribute('allow', 'fullscreen');
+        document.body.appendChild(exploreFrame);
+      }
+      exploreFrame.src = fullExploreUrl;
+      setTimeout(() => {
+        exploreFrame.focus();
+        exploreFrame.contentWindow?.focus();
+      }, 60);
+    }, 350);
+  }
+
+  // Escuchar si desde la vista grande de exploración el jugador presiona [L] Launch to Orbit o Exit
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'expedition:launch-orbit') {
+      const fromBody = e.data.body || currentBodyId;
+      window.location.href = withBase(`/vuelo?from=${fromBody}`);
+    } else if (e.data?.type === 'expedition:exit-standalone') {
+      const standaloneFrame = document.getElementById('standalone-explore-frame');
+      if (standaloneFrame) standaloneFrame.remove();
+      reiniciar();
+    }
+  });
+
   function reiniciar() {
     posX = 0;
     posY = physics.startY ?? 16;
@@ -313,12 +380,16 @@ export function launchLandingMission(config) {
     runElapsed = 0;
     ascentElapsed = 0;
     ascentRedirecting = false;
+    exploringSurface = false;
     ascentFlash.style.opacity = '0';
     pintarEstadoNave(null);
     bordeLuminoso.material.color.setHex(padDefaultColor);
     nave.rotation.z = 0;
     camara.position.set(defaultCamPos[0], defaultCamPos[1], defaultCamPos[2]);
     camara.lookAt(defaultCamLook[0], defaultCamLook[1], defaultCamLook[2]);
+
+    const standaloneFrame = document.getElementById('standalone-explore-frame');
+    if (standaloneFrame) standaloneFrame.remove();
 
     let x;
     do {
@@ -327,15 +398,6 @@ export function launchLandingMission(config) {
     plataforma.position.x = x;
 
     envHooks?.onRestart?.({ padX: x, camera: camara });
-  }
-  function goExploreSurface() {
-    const dest = withBase(config.exploreRoute ?? '/#expedition');
-    try {
-      const targetWin = window.top ?? window;
-      targetWin.location.href = dest;
-    } catch {
-      window.location.href = dest;
-    }
   }
 
   reiniciar();
@@ -369,6 +431,7 @@ export function launchLandingMission(config) {
   window.addEventListener(
     'keydown',
     (e) => {
+      if (exploringSurface) return;
       if (TECLAS_JUEGO.includes(e.code)) e.preventDefault();
       const k = e.key.toLowerCase();
       teclas[e.code] = true;
@@ -408,7 +471,7 @@ export function launchLandingMission(config) {
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
 
-    if (!gate.active) return;
+    if (!gate.active || exploringSurface) return;
 
     runElapsed += dt;
     let motorPrendido = false;
@@ -470,10 +533,14 @@ export function launchLandingMission(config) {
           estado = 'fuera';
           pintarEstadoNave(0xffcc33);
           bordeLuminoso.material.color.setHex(0xffcc33);
+          // Entrar directo al modo exploración al aterrizar
+          goExploreSurface();
         } else {
           estado = 'aterrizado';
           pintarEstadoNave(0x44ff66);
           bordeLuminoso.material.color.setHex(0x44ff66);
+          // Entrar directo al modo exploración justo al aterrizar
+          goExploreSurface();
         }
 
         envHooks?.onTouchdown?.({
@@ -575,17 +642,10 @@ export function launchLandingMission(config) {
         <span class="hud-ok"><b>ASCENDING TO ORBIT</b></span><br>
         Escaping gravity well &mdash; returning to Moon / Mars flight space&hellip;
       `;
-    } else if (estado === 'aterrizado') {
+    } else if (estado === 'aterrizado' || estado === 'fuera') {
       mensaje = `
-        <span class="hud-ok"><b>${copy.landedTitle}</b></span><br>
-        ${copy.landedBody}
-        ${actionButtonsHtml}
-      `;
-    } else if (estado === 'fuera') {
-      mensaje = `
-        <span class="hud-warning"><b>${copy.offPadTitle}</b></span><br>
-        ${copy.offPadBody}
-        ${actionButtonsHtml}
+        <span class="hud-ok"><b>TOUCHDOWN CONFIRMED</b></span><br>
+        Deploying surface rover&hellip;
       `;
     } else if (estado === 'estrellado') {
       mensaje = `
