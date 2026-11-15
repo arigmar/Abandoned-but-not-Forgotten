@@ -240,6 +240,11 @@ export function launchExpedition(options: ExpeditionLaunchOptions): ExpeditionCo
   function skipCurrentSequence(): void {
     if (paused) return;
     if (phase === 'transit') {
+      const target = transitCtrl?.getNavTarget?.() ?? artifact.body;
+      if (target !== artifact.body && onCaptureOtherBody) {
+        onCaptureOtherBody(target);
+        return;
+      }
       enterPhase('descent');
     } else if (phase === 'descent') {
       enterPhase('drive');

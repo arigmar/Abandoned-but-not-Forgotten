@@ -27,6 +27,7 @@ export function initExpeditionSection(): void {
   let currentMode: ReadingMode = getReadingMode();
   let activeController: ExpeditionController | null = null;
   let launching = false;
+  let pendingDescentBody: 'mars' | 'moon' | null = null;
 
   const stageEl = document.getElementById('expedition-stage');
   const standbyEl = document.getElementById('expedition-standby');
@@ -178,6 +179,14 @@ export function initExpeditionSection(): void {
       });
 
       stage.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'nearest' });
+      if (stage.dataset.vueloActive === 'true' && initialPhase === 'transit') {
+        const pauseOverlay = document.getElementById('expedition-pause-overlay');
+        const pauseBtn = document.getElementById('hud-pause-btn') as HTMLButtonElement | null;
+        if (pauseOverlay && pauseOverlay.hidden) {
+          pauseBtn?.click();
+          pauseOverlay.style.visibility = 'hidden';
+        }
+      }
       if (standbyLaunchBtn) {
         standbyLaunchBtn.disabled = false;
         standbyLaunchBtn.textContent = 'Launch Space Simulator ->';
@@ -193,6 +202,13 @@ export function initExpeditionSection(): void {
       }
     } finally {
       launching = false;
+      if (pendingDescentBody) {
+        const nextBody = pendingDescentBody;
+        pendingDescentBody = null;
+        selectedId = findArtifactForBody(nextBody).id;
+        updateSelectionUi();
+        void handleLaunch('descent');
+      }
     }
   }
 
@@ -220,6 +236,18 @@ export function initExpeditionSection(): void {
   standbyLaunchBtn?.addEventListener('click', () => {
     void handleLaunch('transit');
   });
+
+  window.addEventListener('expedition:start-descent', ((e: CustomEvent<{ body?: 'moon' | 'mars' }>) => {
+    const body = e.detail?.body;
+    if (body !== 'mars' && body !== 'moon') return;
+    selectedId = findArtifactForBody(body).id;
+    updateSelectionUi();
+    if (launching) {
+      pendingDescentBody = body;
+      return;
+    }
+    void handleLaunch('descent');
+  }) as EventListener);
 
   subscribeReadingModeChange(updateReadingModeUi);
   updateReadingModeUi(currentMode);
