@@ -174,7 +174,7 @@ All models are from [Sketchfab](https://sketchfab.com/) under the [Creative Comm
 | `mars.glb` | [Mars](https://sketchfab.com/3d-models/mars-5fc8b7168b044527a05ed3903c998b65) | [AirStudios](https://sketchfab.com/sebbe613) | Flight |
 | `perseverance_rover_on_mars.glb` | [Perseverance rover on Mars](https://sketchfab.com/3d-models/perseverance-rover-on-mars-fc11b1c7457b4d07ad7a0825911e2847) | [Ignazio Pillitteri](https://sketchfab.com/gnaz) | Descent |
 | `spaceship.glb` | [SpaceShip](https://sketchfab.com/3d-models/spaceship-6164a883f57f4f13938c3c5999bc0e1f) | [JazOone](https://sketchfab.com/JazOone) | Flight, Descent |
-| `sun.glb` | [Sun](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645) | [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski) | *[SCENE]* |
+| `sun.glb` | [Sun](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645) | [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski) | *Flight* |
 
 ## License
 
