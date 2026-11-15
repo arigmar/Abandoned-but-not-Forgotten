@@ -18,15 +18,36 @@ export interface HudActions {
   onReturnDrive: () => void;
   onSelectHotspot: (index: number) => void;
   onRecoverComplete: () => void;
+  onSelectNavTarget?: (body: 'moon' | 'mars') => void;
+  onFlightAssist?: () => void;
+  onRetryDescent?: () => void;
+  onLaunchOrbit?: () => void;
+  onExploreSurface?: () => void;
+  onContinueSurface?: () => void;
+  onDiagnosticTest?: () => void;
+  onSimModeChange?: (nominal: boolean) => void;
 }
 
 export interface ExpeditionHud {
   setPhase: (phase: ExpeditionPhase) => void;
+  setActiveArtifact: (
+    artifact: ExpeditionArtifact,
+    hotspots: HotspotData[],
+    status: DiscoveryStatus,
+  ) => void;
+  setDiagnosticTested: (testedIds: Set<string>) => void;
   setReadingMode: (mode: ReadingMode) => void;
   setDiscoveryStatus: (status: DiscoveryStatus) => void;
   setDistanceReadout: (text: string) => void;
   setPaused: (paused: boolean) => void;
   setApproachEngaged: (engaged: boolean) => void;
+  setFlightAssistEngaged: (phase: 'transit' | 'descent', engaged: boolean) => void;
+  setNavTargetBody: (body: 'moon' | 'mars') => void;
+  setDescentRetryVisible: (visible: boolean) => void;
+  setTouchdownState: (
+    state: 'flying' | 'landed' | 'offpad' | 'crashed',
+    impactReason?: string,
+  ) => void;
   setHotspots: (hotspots: HotspotData[]) => void;
   updateHotspotProjection: (projected: ProjectedHotspot[]) => void;
   setInspectionProgress: (scannedCount: number, total: number, unlocked: boolean) => void;
@@ -50,6 +71,7 @@ const PHASE_LABELS: Record<ExpeditionPhase, string> = {
   drive: 'PHASE 03 // SURFACE DRIVE',
   inspect: 'PHASE 04 // EXTERIOR INSPECT',
   complete: 'MISSION COMPLETE // RECORDED',
+  ascent: 'ASCENT // LIFTOFF TO ORBIT',
 };
 
 const HOTSPOT_SUBSYSTEMS: Record<string, string[]> = {
@@ -115,6 +137,7 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
 
   const legacy0 = artifact.legacy[0];
   const legacy1 = artifact.legacy[1];
+  const endSummary = artifact.endCause.split('.')[0] || artifact.endCause;
   const legacy2 = artifact.legacy[2];
 
   const finding1Explorer = legacy0
@@ -123,6 +146,13 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
   const finding1Tech = legacy0 ? `${legacy0.finding} (Logged ${artifact.lastContactDate})` : artifact.scientificValue;
 
   const finding2Text = [legacy1?.finding, legacy2?.finding].filter(Boolean).join(' ');
+
+  const shortNominalPower =
+    artifact.id === 'apollo-15-alsep'
+      ? 'SNAP-27 RTG · Continuous 75W+'
+      : artifact.body === 'mars'
+        ? 'Solar Array Nominal · Peak Daylight'
+        : 'Lunar Day Power · Full Battery';
 
   return [
     {
@@ -133,6 +163,16 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
       title: names[0].split(' · ')[0],
       explorerBody: endNote,
       technicalBody: `${endNote} NSSDCA ID: ${artifact.nssdcId}.`,
+      telemetry: {
+        subsystemTag: 'POWER & SHUTDOWN',
+        nominalMetric: 'Peak Operations',
+        nominalValue: shortNominalPower,
+        finalMetric: `Shutdown (${artifact.lastContactDate})`,
+        finalValue: endSummary,
+        waveform: 'power',
+        testLabel: 'Run Power Bus Replay [F]',
+        testResult: `Power trace replayed on ${artifact.name}: peak output recorded between ${artifact.launchDate} and ${artifact.lastContactDate}.`,
+      },
       sourceTitle: artifact.sources[0]?.title,
       sourceUrl: artifact.sources[0]?.url,
     },
@@ -144,6 +184,16 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
       title: names[1].split(' · ')[0],
       explorerBody: `${sizeText}${opsDates}`,
       technicalBody: `${sizeText}Launch UTC: ${artifact.launchDate} | Final contact UTC: ${artifact.lastContactDate} | Coordinates: ${formatCoordinates(artifact.site.lat, artifact.site.lon)} | ${artifact.site.description}`,
+      telemetry: {
+        subsystemTag: 'CHASSIS & EPOCH',
+        nominalMetric: 'Scale Envelope',
+        nominalValue: artifact.sizeFact ?? `${artifact.type.toUpperCase()} · ${artifact.nssdcId}`,
+        finalMetric: 'Mission Timeline',
+        finalValue: `${artifact.launchDate} -> ${artifact.lastContactDate}`,
+        waveform: 'scale',
+        testLabel: 'Run Laser Ranging Sweep [F]',
+        testResult: `LIDAR sweep complete at ${artifact.site.name}: monument bounding profile & coordinate anchor verified against mini-rover.`,
+      },
       sourceTitle: artifact.sources[0]?.title,
       sourceUrl: artifact.sources[0]?.url,
     },
@@ -155,6 +205,16 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
       title: names[2].split(' · ')[0],
       explorerBody: artifact.kidSummary ?? artifact.scientificValue,
       technicalBody: artifact.scientificValue,
+      telemetry: {
+        subsystemTag: 'CORE INSTRUMENT',
+        nominalMetric: 'Primary Payload',
+        nominalValue: names[2].split(' · ')[0],
+        finalMetric: 'Lead Agency',
+        finalValue: artifact.agency,
+        waveform: 'seismic',
+        testLabel: 'Simulate Instrument Pulse [F]',
+        testResult: `Harmonic test carrier injected into ${names[2].split(' · ')[0]}: active response logged across ${artifact.body.toUpperCase()} surface node [3].`,
+      },
       sourceTitle: artifact.sources[1]?.title ?? artifact.sources[0]?.title,
       sourceUrl: artifact.sources[1]?.url ?? artifact.sources[0]?.url,
     },
@@ -166,6 +226,16 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
       title: names[3].split(' · ')[0],
       explorerBody: finding1Explorer,
       technicalBody: finding1Tech,
+      telemetry: {
+        subsystemTag: 'SCIENCE CHANNEL 01',
+        nominalMetric: 'Data Channel',
+        nominalValue: 'Calibrated Telemetry Frame',
+        finalMetric: 'Verified Source',
+        finalValue: legacy0?.sourceTitle ?? artifact.agency,
+        waveform: 'sensor',
+        testLabel: 'Decode Sensor Packet [F]',
+        testResult: `Packet 04 decoded: "${legacy0?.finding ?? artifact.scientificValue}"`,
+      },
       sourceTitle: legacy0?.sourceTitle,
       sourceUrl: legacy0?.sourceUrl,
     },
@@ -177,6 +247,16 @@ export function buildArtifactHotspots(artifact: ExpeditionArtifact): HotspotData
       title: names[4].split(' · ')[0],
       explorerBody: finding2Text || artifact.scientificValue,
       technicalBody: finding2Text || artifact.scientificValue,
+      telemetry: {
+        subsystemTag: 'HIGH-GAIN RELAY',
+        nominalMetric: 'Relay Link',
+        nominalValue: 'X/S-Band Lock',
+        finalMetric: 'Archive Record',
+        finalValue: legacy1?.sourceTitle ?? legacy2?.sourceTitle ?? 'Deep Space Network',
+        waveform: 'relay',
+        testLabel: 'Fire Orbital Relay Ping [F]',
+        testResult: `Orbital relay ping echoed from node [5] on ${artifact.name}: carrier frame synced with surface telemetry.`,
+      },
       sourceTitle: legacy1?.sourceTitle ?? legacy2?.sourceTitle,
       sourceUrl: legacy1?.sourceUrl ?? legacy2?.sourceUrl,
     },
@@ -191,9 +271,13 @@ export function createExpeditionHud(
   reducedMotion: boolean,
   actions: HudActions,
 ): ExpeditionHud {
+  let currentArtifact: ExpeditionArtifact = artifact;
   let currentMode: ReadingMode = initialMode;
   let currentPhase: ExpeditionPhase = 'transit';
   let activePlaque: HotspotData | null = null;
+  let currentHotspotList: HotspotData[] = [];
+  let testedHotspotIds = new Set<string>();
+  let simNominal = true;
   let holdUnlocked = false;
   let holdCompleted = false;
   let holdActive = false;
@@ -207,6 +291,12 @@ export function createExpeditionHud(
   const nssdcEl = byId('hud-nssdc');
   const verifyBadgeEl = byId('hud-verification-badge');
   const scalePillEl = byId('hud-scale-pill');
+  const targetSwitchEl = byId('hud-target-switch');
+  const targetMoonBtn = byId<HTMLButtonElement>('hud-target-moon');
+  const targetMarsBtn = byId<HTMLButtonElement>('hud-target-mars');
+  const assistBtn = byId<HTMLButtonElement>('hud-assist-btn');
+  const retryBtn = byId<HTMLButtonElement>('hud-retry-btn');
+  const orbitBtn = byId<HTMLButtonElement>('hud-orbit-btn');
   const skipBtn = byId<HTMLButtonElement>('hud-skip-btn');
   const pauseBtn = byId<HTMLButtonElement>('hud-pause-btn');
   const fullscreenBtn = byId<HTMLButtonElement>('hud-fullscreen-btn');
@@ -218,11 +308,26 @@ export function createExpeditionHud(
   const stateBadgeEl = byId('hud-state-badge');
 
   const hotspotsLayerEl = byId('hud-hotspots-layer');
+  const touchdownCardEl = byId('hud-touchdown-card');
+  const touchdownEyebrowEl = byId('hud-touchdown-eyebrow');
+  const touchdownTitleEl = byId('hud-touchdown-title');
+  const touchdownBodyEl = byId('hud-touchdown-body');
+  const touchdownExploreBtn = byId<HTMLButtonElement>('hud-touchdown-explore-btn');
+  const touchdownOrbitBtn = byId<HTMLButtonElement>('hud-touchdown-orbit-btn');
+  const touchdownRetryBtn = byId<HTMLButtonElement>('hud-touchdown-retry-btn');
+
   const plaqueCardEl = byId('hud-plaque-card');
   const plaqueEyebrowEl = byId('hud-plaque-eyebrow');
+  const plaqueTabsEl = byId('hud-plaque-tabs');
   const plaqueModePillEl = byId('hud-plaque-mode-pill');
   const plaqueTitleEl = byId('hud-plaque-title');
   const plaqueBodyEl = byId('hud-plaque-body');
+  const plaqueMetricLabelEl = byId('hud-plaque-metric-label');
+  const plaqueMetricValueEl = byId('hud-plaque-metric-value');
+  const plaqueSimToggleBtn = byId<HTMLButtonElement>('hud-plaque-sim-toggle');
+  const plaqueWaveEl = byId('hud-plaque-wave');
+  const plaqueTestBtn = byId<HTMLButtonElement>('hud-plaque-test-btn');
+  const plaqueTestResultEl = byId('hud-plaque-test-result');
   const plaqueSourceEl = byId<HTMLAnchorElement>('hud-plaque-source');
   const plaqueCloseBtn = byId<HTMLButtonElement>('hud-plaque-close-btn');
   const plaqueNextBtn = byId<HTMLButtonElement>('hud-plaque-next-btn');
@@ -230,6 +335,7 @@ export function createExpeditionHud(
   const driveControlsEl = byId('hud-drive-controls');
   const pulseBtn = byId<HTMLButtonElement>('hud-pulse-btn');
   const approachBtn = byId<HTMLButtonElement>('hud-approach-btn');
+  const driveOrbitBtn = byId<HTMLButtonElement>('hud-drive-orbit-btn');
 
   const inspectControlsEl = byId('hud-inspect-controls');
   const hotspotProgressEl = byId('hud-hotspot-progress');
@@ -237,6 +343,7 @@ export function createExpeditionHud(
   const scanBtn = byId<HTMLButtonElement>('hud-scan-btn');
   const nextHotspotBtn = byId<HTMLButtonElement>('hud-next-hotspot');
   const returnDriveBtn = byId<HTMLButtonElement>('hud-return-drive-btn');
+  const inspectOrbitBtn = byId<HTMLButtonElement>('hud-inspect-orbit-btn');
 
   const holdBtn = byId<HTMLButtonElement>('hud-hold-btn');
   const holdProgressCircle = document.getElementById('hud-hold-progress') as SVGCircleElement | null;
@@ -253,29 +360,111 @@ export function createExpeditionHud(
   const completeLegacyListEl = byId('hud-complete-legacy-list');
   const completeArchiveLinkEl = byId<HTMLAnchorElement>('hud-complete-archive-link');
   const completeAnotherBtn = byId<HTMLButtonElement>('hud-complete-another-btn');
+  const completeOrbitBtn = byId<HTMLButtonElement>('hud-complete-orbit-btn');
   const completeSimulatorLink = byId<HTMLAnchorElement>('hud-complete-simulator-link');
 
   const hotspotButtons = new Map<string, HTMLButtonElement>();
 
-  // Initialize header identity strictly from real catalog values
-  if (targetNameEl) targetNameEl.textContent = artifact.name;
-  if (nssdcEl) nssdcEl.textContent = `NSSDCA ${artifact.nssdcId}`;
-  if (siteNameEl) siteNameEl.textContent = artifact.site.name;
-  if (siteCoordsEl) {
-    siteCoordsEl.textContent = formatCoordinates(artifact.site.lat, artifact.site.lon);
+  function syncArtifactHeader(target: ExpeditionArtifact): void {
+    if (targetNameEl) targetNameEl.textContent = target.name;
+    if (nssdcEl) nssdcEl.textContent = `NSSDCA ${target.nssdcId}`;
+    if (siteNameEl) siteNameEl.textContent = target.site.name;
+    if (siteCoordsEl) {
+      siteCoordsEl.textContent = formatCoordinates(target.site.lat, target.site.lon);
+    }
+    if (verifyBadgeEl) {
+      const needsVerify =
+        target.verification === 'pending' ||
+        target.site.lat === 'pending' ||
+        target.site.lon === 'pending';
+      verifyBadgeEl.hidden = !needsVerify;
+    }
   }
-  if (verifyBadgeEl) {
-    const needsVerify =
-      artifact.verification === 'pending' ||
-      artifact.site.lat === 'pending' ||
-      artifact.site.lon === 'pending';
-    verifyBadgeEl.hidden = !needsVerify;
+
+  // Initialize header identity strictly from real catalog values
+  syncArtifactHeader(currentArtifact);
+
+  function buildWaveSvg(waveform: HotspotData['telemetry']['waveform'], nominal: boolean, tested: boolean): string {
+    const stroke = nominal ? '#2EC4B6' : '#FF9F1C';
+    const glow = tested ? '#FF9F1C' : stroke;
+    let pts = '';
+    if (waveform === 'power') {
+      pts = nominal
+        ? '4,10 38,8 74,9 112,8 148,10 176,9'
+        : '4,8 46,9 88,12 122,26 150,33 176,34';
+    } else if (waveform === 'scale') {
+      const shipBar = 148;
+      const monBar = nominal ? 46 : 36;
+      const roverBar = 14;
+      return `<svg viewBox="0 0 180 38" class="h-full w-full" aria-hidden="true">
+        <rect x="4" y="6" width="${shipBar}" height="6" fill="#7A89A6" fill-opacity="0.55" />
+        <rect x="4" y="16" width="${monBar}" height="6" fill="${glow}" />
+        <rect x="4" y="26" width="${roverBar}" height="6" fill="#2EC4B6" />
+      </svg>`;
+    } else if (waveform === 'seismic') {
+      pts = nominal
+        ? '4,19 28,19 36,6 44,32 52,11 60,27 70,18 98,19 106,8 114,31 124,14 134,20 176,19'
+        : '4,22 44,21 62,23 94,19 124,22 176,22';
+    } else if (waveform === 'sensor') {
+      pts = nominal
+        ? '4,28 24,28 24,12 52,12 52,22 86,22 86,8 122,8 122,20 152,20 152,10 176,10'
+        : '4,29 50,29 70,18 92,30 130,30 176,28';
+    } else {
+      pts = tested
+        ? '4,30 34,30 42,6 50,30 88,30 96,6 104,30 142,30 150,6 158,30 176,30'
+        : '4,26 48,26 56,14 64,26 116,26 124,14 132,26 176,26';
+    }
+
+    return `<svg viewBox="0 0 180 38" class="h-full w-full" aria-hidden="true">
+      <line x1="0" y1="19" x2="180" y2="19" stroke="#7A89A6" stroke-opacity="0.22" stroke-width="1" />
+      <polyline fill="none" stroke="${glow}" stroke-width="${tested ? 2.2 : 1.7}" points="${pts}" />
+    </svg>`;
+  }
+
+  function renderPlaqueTabs(): void {
+    if (!plaqueTabsEl) return;
+    plaqueTabsEl.innerHTML = '';
+    currentHotspotList.forEach((hp, index) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const isCurrent = activePlaque?.id === hp.id;
+      const isTested = testedHotspotIds.has(hp.id);
+      btn.textContent = isTested ? `${hp.key}*` : String(hp.key);
+      btn.title = hp.label;
+      btn.className =
+        'cursor-pointer border px-1.5 py-0.5 font-mono-telemetry text-[9px] font-bold transition-colors';
+      btn.style.borderColor = isCurrent
+        ? 'var(--color-amber)'
+        : isTested
+          ? 'var(--color-turquoise)'
+          : 'var(--color-border-strong)';
+      btn.style.backgroundColor = isCurrent
+        ? 'var(--color-amber-dim)'
+        : isTested
+          ? 'var(--color-turquoise-dim)'
+          : 'var(--color-slate)';
+      btn.style.color = isCurrent
+        ? 'var(--color-amber)'
+        : isTested
+          ? 'var(--color-turquoise)'
+          : 'var(--color-text-secondary)';
+      btn.addEventListener('click', () => {
+        actions.onSelectHotspot(index);
+        actions.onScanActive();
+      });
+      plaqueTabsEl.appendChild(btn);
+    });
   }
 
   function renderPlaqueContent(): void {
     if (!plaqueCardEl || !activePlaque) return;
     plaqueCardEl.hidden = false;
-    if (plaqueEyebrowEl) plaqueEyebrowEl.textContent = activePlaque.eyebrow;
+    renderPlaqueTabs();
+    const isTested = testedHotspotIds.has(activePlaque.id);
+
+    if (plaqueEyebrowEl) {
+      plaqueEyebrowEl.textContent = `${activePlaque.eyebrow} · ${activePlaque.telemetry.subsystemTag}`;
+    }
     if (plaqueModePillEl) {
       plaqueModePillEl.textContent = currentMode === 'explorer' ? 'EXPLORER MODE' : 'MISSION LOG';
     }
@@ -283,6 +472,42 @@ export function createExpeditionHud(
     if (plaqueBodyEl) {
       plaqueBodyEl.textContent =
         currentMode === 'explorer' ? activePlaque.explorerBody : activePlaque.technicalBody;
+    }
+    if (plaqueSimToggleBtn) {
+      plaqueSimToggleBtn.textContent = simNominal ? 'NOMINAL OPS' : 'FINAL STATE';
+      plaqueSimToggleBtn.style.color = simNominal ? 'var(--color-turquoise)' : 'var(--color-amber)';
+      plaqueSimToggleBtn.style.borderColor = simNominal
+        ? 'var(--color-turquoise-border)'
+        : 'var(--color-amber-border)';
+    }
+    if (plaqueMetricLabelEl) {
+      plaqueMetricLabelEl.textContent = simNominal
+        ? activePlaque.telemetry.nominalMetric
+        : activePlaque.telemetry.finalMetric;
+    }
+    if (plaqueMetricValueEl) {
+      plaqueMetricValueEl.textContent = simNominal
+        ? activePlaque.telemetry.nominalValue
+        : activePlaque.telemetry.finalValue;
+      plaqueMetricValueEl.style.color = simNominal
+        ? 'var(--color-turquoise)'
+        : 'var(--color-amber)';
+    }
+    if (plaqueWaveEl) {
+      plaqueWaveEl.innerHTML = buildWaveSvg(activePlaque.telemetry.waveform, simNominal, isTested);
+    }
+    if (plaqueTestBtn) {
+      plaqueTestBtn.textContent = isTested
+        ? `RE-PING TEST [F] (CALIBRATED)`
+        : activePlaque.telemetry.testLabel;
+    }
+    if (plaqueTestResultEl) {
+      if (isTested) {
+        plaqueTestResultEl.hidden = false;
+        plaqueTestResultEl.textContent = `HARDWARE TEST LOG // ${activePlaque.telemetry.testResult}`;
+      } else {
+        plaqueTestResultEl.hidden = true;
+      }
     }
     if (plaqueSourceEl) {
       if (activePlaque.sourceUrl && activePlaque.sourceTitle) {
@@ -371,7 +596,31 @@ export function createExpeditionHud(
     actions.onNextHotspot();
     actions.onScanActive();
   };
-  const onCompleteAnotherClick = (): void => actions.onAbortToSelector();
+  const onPlaqueSimToggleClick = (): void => {
+    simNominal = !simNominal;
+    actions.onSimModeChange?.(simNominal);
+    renderPlaqueContent();
+  };
+  const onPlaqueTestClick = (): void => {
+    actions.onDiagnosticTest?.();
+  };
+  const onCompleteAnotherClick = (): void => {
+    if (actions.onContinueSurface) {
+      actions.onContinueSurface();
+      return;
+    }
+    actions.onAbortToSelector();
+  };
+  const onTargetMoonClick = (): void => actions.onSelectNavTarget?.('moon');
+  const onTargetMarsClick = (): void => actions.onSelectNavTarget?.('mars');
+  const onAssistClick = (): void => actions.onFlightAssist?.();
+  const onRetryClick = (): void => actions.onRetryDescent?.();
+  const onExploreClick = (): void => actions.onExploreSurface?.();
+  const onOrbitClick = (): void => {
+    if (completeCardEl) completeCardEl.hidden = true;
+    if (touchdownCardEl) touchdownCardEl.hidden = true;
+    actions.onLaunchOrbit?.();
+  };
   const onCompleteLinkClick = (): void => {
     // Close fullscreen before Archive script scrolls to #archive
     if (document.fullscreenElement === stageEl) {
@@ -381,6 +630,17 @@ export function createExpeditionHud(
     actions.onExit();
   };
 
+  targetMoonBtn?.addEventListener('click', onTargetMoonClick);
+  targetMarsBtn?.addEventListener('click', onTargetMarsClick);
+  assistBtn?.addEventListener('click', onAssistClick);
+  retryBtn?.addEventListener('click', onRetryClick);
+  orbitBtn?.addEventListener('click', onOrbitClick);
+  driveOrbitBtn?.addEventListener('click', onOrbitClick);
+  inspectOrbitBtn?.addEventListener('click', onOrbitClick);
+  completeOrbitBtn?.addEventListener('click', onOrbitClick);
+  touchdownExploreBtn?.addEventListener('click', onExploreClick);
+  touchdownOrbitBtn?.addEventListener('click', onOrbitClick);
+  touchdownRetryBtn?.addEventListener('click', onRetryClick);
   skipBtn?.addEventListener('click', onSkipClick);
   pauseBtn?.addEventListener('click', onPauseClick);
   fullscreenBtn?.addEventListener('click', onFsClick);
@@ -396,6 +656,8 @@ export function createExpeditionHud(
   returnDriveBtn?.addEventListener('click', onReturnDriveClick);
   plaqueCloseBtn?.addEventListener('click', onPlaqueCloseClick);
   plaqueNextBtn?.addEventListener('click', onPlaqueNextClick);
+  plaqueSimToggleBtn?.addEventListener('click', onPlaqueSimToggleClick);
+  plaqueTestBtn?.addEventListener('click', onPlaqueTestClick);
   completeAnotherBtn?.addEventListener('click', onCompleteAnotherClick);
   completeArchiveLinkEl?.addEventListener('click', onCompleteLinkClick);
   completeSimulatorLink?.addEventListener('click', onCompleteLinkClick);
@@ -412,7 +674,19 @@ export function createExpeditionHud(
       stageEl.dataset.phase = phase;
       if (phaseLabelEl) phaseLabelEl.textContent = PHASE_LABELS[phase];
 
-      if (skipBtn) skipBtn.hidden = !(phase === 'transit' || phase === 'descent');
+      if (skipBtn) skipBtn.hidden = !(phase === 'transit' || phase === 'descent' || phase === 'ascent');
+      if (targetSwitchEl) targetSwitchEl.hidden = phase !== 'transit';
+      if (assistBtn) assistBtn.hidden = !(phase === 'transit' || phase === 'descent');
+      if (orbitBtn) {
+        orbitBtn.hidden = !(
+          phase === 'descent' ||
+          phase === 'drive' ||
+          phase === 'inspect' ||
+          phase === 'complete'
+        );
+      }
+      if (retryBtn && phase !== 'descent') retryBtn.hidden = true;
+      if (touchdownCardEl && phase !== 'descent') touchdownCardEl.hidden = true;
       if (driveControlsEl) driveControlsEl.hidden = phase !== 'drive';
       if (inspectControlsEl) inspectControlsEl.hidden = phase !== 'inspect';
       if (completeCardEl) completeCardEl.hidden = phase !== 'complete';
@@ -430,6 +704,37 @@ export function createExpeditionHud(
       if (phase !== 'inspect' && plaqueCardEl) {
         plaqueCardEl.hidden = true;
       }
+    },
+
+    setActiveArtifact(
+      nextArtifact: ExpeditionArtifact,
+      hotspots: HotspotData[],
+      status: DiscoveryStatus,
+    ) {
+      currentArtifact = nextArtifact;
+      activePlaque = null;
+      if (plaqueCardEl) plaqueCardEl.hidden = true;
+      holdCompleted = status === 'recovered';
+      holdUnlocked = false;
+      holdActive = false;
+      if (holdStatusEl) {
+        holdStatusEl.textContent = holdCompleted
+          ? 'DATA RECOVERED // RECORDED'
+          : 'SCAN ALL 5 POINTS TO UNLOCK';
+      }
+      testedHotspotIds.clear();
+      simNominal = true;
+      resetHoldRing();
+      testedHotspotIds.clear();
+      simNominal = true;
+      syncArtifactHeader(nextArtifact);
+      this.setDiscoveryStatus(status);
+      this.setHotspots(hotspots);
+    },
+
+    setDiagnosticTested(testedIds: Set<string>) {
+      testedHotspotIds = new Set(testedIds);
+      renderPlaqueContent();
     },
 
     setReadingMode(mode: ReadingMode) {
@@ -458,7 +763,94 @@ export function createExpeditionHud(
       approachBtn.textContent = engaged ? 'Autopilot Active [G]' : 'Auto-Approach [G]';
     },
 
+    setFlightAssistEngaged(phase: 'transit' | 'descent', engaged: boolean) {
+      if (!assistBtn) return;
+      if (phase === 'transit') {
+        assistBtn.textContent = engaged ? 'Auto-Cruise Active [G]' : 'Auto-Cruise [G]';
+      } else {
+        assistBtn.textContent = engaged ? 'Auto-Land Active [G]' : 'Auto-Land [G]';
+      }
+    },
+
+    setNavTargetBody(body: 'moon' | 'mars') {
+      if (targetMoonBtn) {
+        const active = body === 'moon';
+        targetMoonBtn.setAttribute('aria-pressed', String(active));
+        targetMoonBtn.style.backgroundColor = active
+          ? 'var(--color-turquoise-dim)'
+          : 'var(--color-slate)';
+        targetMoonBtn.style.borderColor = active
+          ? 'var(--color-turquoise)'
+          : 'var(--color-border-strong)';
+      }
+      if (targetMarsBtn) {
+        const active = body === 'mars';
+        targetMarsBtn.setAttribute('aria-pressed', String(active));
+        targetMarsBtn.style.backgroundColor = active
+          ? 'var(--color-amber-dim)'
+          : 'var(--color-slate)';
+        targetMarsBtn.style.borderColor = active
+          ? 'var(--color-amber)'
+          : 'var(--color-border-strong)';
+      }
+    },
+
+    setDescentRetryVisible(visible: boolean) {
+      if (retryBtn) retryBtn.hidden = !visible;
+    },
+
+    setTouchdownState(
+      state: 'flying' | 'landed' | 'offpad' | 'crashed',
+      impactReason?: string,
+    ) {
+      if (!touchdownCardEl) return;
+      if (currentPhase !== 'descent' || state === 'flying') {
+        touchdownCardEl.hidden = true;
+        return;
+      }
+      touchdownCardEl.hidden = false;
+      const bodyLabel = currentArtifact.body === 'mars' ? 'Mars' : 'Moon';
+      if (state === 'landed') {
+        if (touchdownEyebrowEl) {
+          touchdownEyebrowEl.textContent = 'SOFT LANDING CONFIRMED';
+          touchdownEyebrowEl.style.color = 'var(--color-turquoise)';
+        }
+        if (touchdownTitleEl) {
+          touchdownTitleEl.textContent = `${bodyLabel} Surface · All ${bodyLabel} Sites Active`;
+        }
+        if (touchdownBodyEl) {
+          touchdownBodyEl.textContent = `Landed safely on ${bodyLabel}. Deploy the miniature rover to locate all historical ${bodyLabel} monuments in their real landing zones, or launch back to open orbit.`;
+        }
+      } else if (state === 'offpad') {
+        if (touchdownEyebrowEl) {
+          touchdownEyebrowEl.textContent = 'TOUCHDOWN OFF-PAD (SAFE)';
+          touchdownEyebrowEl.style.color = 'var(--color-amber)';
+        }
+        if (touchdownTitleEl) {
+          touchdownTitleEl.textContent = `${bodyLabel} Surface · All ${bodyLabel} Sites Active`;
+        }
+        if (touchdownBodyEl) {
+          touchdownBodyEl.textContent = `Safe touchdown outside the beacon pad. Deploy the miniature rover to locate all historical ${bodyLabel} monuments in their real landing zones, retry the landing, or return to orbit.`;
+        }
+      } else {
+        if (touchdownEyebrowEl) {
+          touchdownEyebrowEl.textContent = 'HARD IMPACT RECOVERY';
+          touchdownEyebrowEl.style.color = 'var(--color-alert)';
+        }
+        if (touchdownTitleEl) {
+          touchdownTitleEl.textContent = impactReason
+            ? `Hard Touchdown (${impactReason})`
+            : `Hard Touchdown on ${bodyLabel}`;
+        }
+        if (touchdownBodyEl) {
+          touchdownBodyEl.textContent =
+            'Retry your powered descent, fire orbital boost back to spaceflight, or deploy the surface rover anyway.';
+        }
+      }
+    },
+
     setHotspots(hotspots: HotspotData[]) {
+      currentHotspotList = hotspots;
       if (!hotspotsLayerEl) return;
       hotspotsLayerEl.innerHTML = '';
       hotspotButtons.clear();
@@ -481,18 +873,104 @@ export function createExpeditionHud(
 
     updateHotspotProjection(projected: ProjectedHotspot[]) {
       if (currentPhase !== 'inspect') return;
-      for (const item of projected) {
+
+      const stageRect = hotspotsLayerEl?.getBoundingClientRect() ?? null;
+      const stageW = stageRect?.width ?? 0;
+      const stageH = stageRect?.height ?? 0;
+
+      // Measure the open diagnostic plaque card in hotspotsLayerEl coordinates
+      let blockedCardRect: { left: number; top: number; right: number; bottom: number } | null =
+        null;
+      if (stageRect && plaqueCardEl && !plaqueCardEl.hidden) {
+        const cardRect = plaqueCardEl.getBoundingClientRect();
+        if (cardRect.width > 0 && cardRect.height > 0) {
+          blockedCardRect = {
+            left: cardRect.left - stageRect.left - 78,
+            top: cardRect.top - stageRect.top - 22,
+            right: cardRect.right - stageRect.left + 78,
+            bottom: cardRect.bottom - stageRect.top + 22,
+          };
+        }
+      }
+
+      const layoutCoords = projected.map((item) => ({
+        x: item.x,
+        y: item.y,
+        visible: item.visible,
+      }));
+
+      // Pairwise 2D screen-space separation pass so floating numeric tags never stack
+      const visibleIndices = layoutCoords
+        .map((pos, idx) => (pos.visible ? idx : -1))
+        .filter((idx) => idx >= 0);
+
+      for (let pass = 0; pass < 3; pass++) {
+        for (let aIdx = 0; aIdx < visibleIndices.length; aIdx++) {
+          for (let bIdx = aIdx + 1; bIdx < visibleIndices.length; bIdx++) {
+            const a = layoutCoords[visibleIndices[aIdx]];
+            const b = layoutCoords[visibleIndices[bIdx]];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            if (Math.abs(dx) < 132 && Math.abs(dy) < 30) {
+              const pushY = (30 - Math.abs(dy)) * 0.55;
+              const dirY = dy >= 0 ? 1 : -1;
+              a.y -= dirY * pushY;
+              b.y += dirY * pushY;
+              if (Math.abs(dx) < 24) {
+                const dirX = dx >= 0 ? 1 : -1;
+                a.x -= dirX * 8;
+                b.x += dirX * 8;
+              }
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < projected.length; i++) {
+        const item = projected[i];
+        const pos = layoutCoords[i];
         const btn = hotspotButtons.get(item.data.id);
         if (!btn) continue;
-        if (!item.visible) {
+
+        let shouldHide = !pos.visible;
+        if (!shouldHide && stageW > 0 && stageH > 0) {
+          if (pos.y < 84 || pos.y > stageH - 66) {
+            shouldHide = true;
+          }
+          if (
+            !shouldHide &&
+            blockedCardRect &&
+            pos.x >= blockedCardRect.left &&
+            pos.x <= blockedCardRect.right &&
+            pos.y >= blockedCardRect.top &&
+            pos.y <= blockedCardRect.bottom
+          ) {
+            shouldHide = true;
+          }
+        }
+
+        if (shouldHide) {
           btn.hidden = true;
           continue;
         }
-        btn.hidden = false;
-        btn.style.left = `${item.x.toFixed(1)}px`;
-        btn.style.top = `${item.y.toFixed(1)}px`;
 
-        if (item.scanned) {
+        const clampedX = stageW > 0 ? Math.max(76, Math.min(stageW - 76, pos.x)) : pos.x;
+        const clampedY = stageH > 0 ? Math.max(84, Math.min(stageH - 68, pos.y)) : pos.y;
+
+        btn.hidden = false;
+        btn.style.left = `${clampedX.toFixed(1)}px`;
+        btn.style.top = `${clampedY.toFixed(1)}px`;
+
+        const isTested = testedHotspotIds.has(item.data.id);
+        btn.textContent = isTested
+          ? `[${item.data.key}] ${item.data.title} · TESTED`
+          : `[${item.data.key}] ${item.data.title}`;
+
+        if (isTested) {
+          btn.style.borderColor = 'var(--color-amber)';
+          btn.style.backgroundColor = 'rgba(25, 19, 10, 0.92)';
+          btn.style.color = 'var(--color-amber)';
+        } else if (item.scanned) {
           btn.style.borderColor = 'var(--color-turquoise)';
           btn.style.backgroundColor = 'rgba(9, 13, 22, 0.9)';
           btn.style.color = 'var(--color-turquoise)';
@@ -560,17 +1038,17 @@ export function createExpeditionHud(
     showCompleteCard() {
       this.setPhase('complete');
       if (completeScaleEl) {
-        completeScaleEl.textContent = artifact.sizeFact ?? `NSSDCA ${artifact.nssdcId}`;
+        completeScaleEl.textContent = currentArtifact.sizeFact ?? `NSSDCA ${currentArtifact.nssdcId}`;
       }
       if (completeTitleEl) {
-        completeTitleEl.textContent = `${artifact.name} · Archive Link Recovered`;
+        completeTitleEl.textContent = `${currentArtifact.name} · Archive Link Recovered`;
       }
       if (completeArchiveLinkEl) {
-        completeArchiveLinkEl.dataset.openArchivePlaque = artifact.id;
+        completeArchiveLinkEl.dataset.openArchivePlaque = currentArtifact.id;
       }
       if (completeLegacyListEl) {
         completeLegacyListEl.innerHTML = '';
-        for (const entry of artifact.legacy) {
+        for (const entry of currentArtifact.legacy) {
           const li = document.createElement('li');
           li.className =
             'border border-[var(--color-border)] bg-[var(--color-slate)] p-3 text-xs leading-relaxed text-[var(--color-text-primary)]';
@@ -591,15 +1069,18 @@ export function createExpeditionHud(
           completeLegacyListEl.appendChild(li);
         }
       }
-      this.announce(`${artifact.name} archive link recovered.`);
+      this.announce(`${currentArtifact.name} archive link recovered.`);
     },
 
     resetRun() {
       activePlaque = null;
       holdUnlocked = false;
       holdCompleted = false;
+      testedHotspotIds.clear();
+      simNominal = true;
       resetHoldRing();
       if (plaqueCardEl) plaqueCardEl.hidden = true;
+      if (touchdownCardEl) touchdownCardEl.hidden = true;
       if (completeCardEl) completeCardEl.hidden = true;
       if (approachBtn) approachBtn.textContent = 'Auto-Approach [G]';
     },
@@ -611,6 +1092,17 @@ export function createExpeditionHud(
     },
 
     destroy() {
+      targetMoonBtn?.removeEventListener('click', onTargetMoonClick);
+      targetMarsBtn?.removeEventListener('click', onTargetMarsClick);
+      assistBtn?.removeEventListener('click', onAssistClick);
+      retryBtn?.removeEventListener('click', onRetryClick);
+      orbitBtn?.removeEventListener('click', onOrbitClick);
+      driveOrbitBtn?.removeEventListener('click', onOrbitClick);
+      inspectOrbitBtn?.removeEventListener('click', onOrbitClick);
+      completeOrbitBtn?.removeEventListener('click', onOrbitClick);
+      touchdownExploreBtn?.removeEventListener('click', onExploreClick);
+      touchdownOrbitBtn?.removeEventListener('click', onOrbitClick);
+      touchdownRetryBtn?.removeEventListener('click', onRetryClick);
       skipBtn?.removeEventListener('click', onSkipClick);
       pauseBtn?.removeEventListener('click', onPauseClick);
       fullscreenBtn?.removeEventListener('click', onFsClick);
@@ -626,6 +1118,8 @@ export function createExpeditionHud(
       returnDriveBtn?.removeEventListener('click', onReturnDriveClick);
       plaqueCloseBtn?.removeEventListener('click', onPlaqueCloseClick);
       plaqueNextBtn?.removeEventListener('click', onPlaqueNextClick);
+      plaqueSimToggleBtn?.removeEventListener('click', onPlaqueSimToggleClick);
+      plaqueTestBtn?.removeEventListener('click', onPlaqueTestClick);
       completeAnotherBtn?.removeEventListener('click', onCompleteAnotherClick);
       completeArchiveLinkEl?.removeEventListener('click', onCompleteLinkClick);
       completeSimulatorLink?.removeEventListener('click', onCompleteLinkClick);
@@ -637,6 +1131,7 @@ export function createExpeditionHud(
       holdBtn?.removeEventListener('click', onHoldKeyClick);
 
       if (hotspotsLayerEl) hotspotsLayerEl.innerHTML = '';
+      if (touchdownCardEl) touchdownCardEl.hidden = true;
       if (plaqueCardEl) plaqueCardEl.hidden = true;
       if (pauseOverlayEl) pauseOverlayEl.hidden = true;
       if (completeCardEl) completeCardEl.hidden = true;

@@ -88,3 +88,27 @@ export function playSonarTone(kind: 'ping' | 'scan' | 'recover' | 'tick'): void 
   osc.start(now);
   osc.stop(now + 0.22);
 }
+
+const SUBSYSTEM_FREQS = [392.0, 440.0, 523.25, 587.33, 659.25];
+
+export function playSubsystemPulseTone(index: number, nominal = true): void {
+  if (!sonarEnabled || typeof window === 'undefined') return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!audioCtx) setSonarEnabled(true);
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') void audioCtx.resume();
+
+  const base = SUBSYSTEM_FREQS[((index % 5) + 5) % 5] ?? 440;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = nominal ? 'triangle' : 'sawtooth';
+  osc.frequency.setValueAtTime(base, now);
+  osc.frequency.exponentialRampToValueAtTime(nominal ? base * 1.5 : base * 0.72, now + 0.19);
+  gain.gain.setValueAtTime(0.04, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.23);
+}

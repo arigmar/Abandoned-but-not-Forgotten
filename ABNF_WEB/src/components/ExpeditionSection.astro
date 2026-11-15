@@ -1,23 +1,11 @@
 ---
-import { ARTIFACT_TYPE_LABELS, formatCoordinates, type Artifact } from '../lib/archive';
+import type { Artifact } from '../lib/archive';
 
 interface Props {
   artifacts: Artifact[];
 }
 
 const { artifacts } = Astro.props;
-
-const marsArtifacts = artifacts.filter((a) => a.body === 'mars');
-const moonArtifacts = artifacts.filter((a) => a.body === 'moon');
-const bodyGroups = [
-  { key: 'mars' as const, label: 'MARS MONUMENTS', items: marsArtifacts },
-  { key: 'moon' as const, label: 'MOON MONUMENTS', items: moonArtifacts },
-];
-
-const defaultArtifact = artifacts[0];
-const defaultCoords = defaultArtifact
-  ? formatCoordinates(defaultArtifact.site.lat, defaultArtifact.site.lon)
-  : 'NO TARGET';
 
 // Strip build-time ImageMetadata so only pure text & coordinates serialize to client
 const expeditionCatalog = artifacts.map((artifact) => ({
@@ -53,16 +41,16 @@ const expeditionCatalog = artifacts.map((artifact) => ({
     <div class="flex flex-col gap-3 border-b border-[var(--color-border)] pb-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
-          02 // EXPEDITION · SECTION 02 / 06
+          02 // SPACE &amp; SURFACE SIMULATOR · SECTION 02 / 06
         </p>
         <h2
           id="expedition-heading"
           class="mt-1.5 font-serif-display text-4xl tracking-tight text-[var(--color-text-primary)] sm:text-5xl"
         >
-          Surface Expedition
+          Orbital Flight &amp; Surface Explorer
         </h2>
         <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
-          Fly across deep space, descend to Mars or the Moon, drive a generic survey rover to a dormant NASA monument, and inspect its exterior telemetry.
+          Start in open deep space between Earth, the Moon, and Mars. Land under real gravity, deploy your rover to inspect dormant monuments nearby, or blast back off into orbit to explore another world.
         </p>
       </div>
 
@@ -91,144 +79,16 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         </div>
 
         <span class="border border-[var(--color-border)] bg-[var(--color-slate)] px-2.5 py-1.5 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
-          Exteriors Only
+          Unified 3D Engine
         </span>
       </div>
     </div>
 
-    <!-- Step 0: Target Monument Launch Selector -->
-    <div id="expedition-launch-panel" class="surface-slate space-y-5 p-4 sm:p-6">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
-        <div>
-          <h3 class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase">
-            01 // Select Target Monument (All 6 Unlocked)
-          </h3>
-          <p class="mt-0.5 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
-            SINGLE DATA SOURCE · PICK MARS OR MOON · PROGRESS SYNCED LIVE WITH 05 // ARCHIVE
-          </p>
-        </div>
-        <span class="border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-turquoise)] uppercase">
-          Distances compressed — not to scale
-        </span>
-      </div>
-
-      <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {
-          bodyGroups.map((group) => (
-            <div class="space-y-2.5">
-              <p class="font-mono-telemetry text-[11px] font-bold tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
-                {group.label} ({group.items.length})
-              </p>
-              <div class="grid grid-cols-1 gap-2.5">
-                {group.items.map((artifact) => {
-                  const isDefault = artifact.id === defaultArtifact?.id;
-                  const coords = formatCoordinates(artifact.site.lat, artifact.site.lon);
-                  return (
-                    <button
-                      type="button"
-                      data-expedition-select={artifact.id}
-                      aria-pressed={isDefault ? 'true' : 'false'}
-                      class="expedition-card group flex w-full cursor-pointer flex-col gap-2 border border-[var(--color-border)] bg-[var(--color-void)] p-3.5 text-left transition-colors hover:border-[var(--color-turquoise-border)]"
-                    >
-                      <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex flex-wrap items-center gap-1.5 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase">
-                          <span class="border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-1.5 py-0.5 text-[var(--color-text-primary)]">
-                            {ARTIFACT_TYPE_LABELS[artifact.type]}
-                          </span>
-                          <span>{artifact.nssdcId}</span>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-1.5">
-                          <span
-                            data-expedition-discovery={artifact.id}
-                            data-discovery-state="dormant"
-                            class="expedition-discovery-pill border border-[var(--color-border)] bg-[var(--color-slate)] px-1.5 py-0.5 font-mono-telemetry text-[9px] font-bold tracking-[0.1em] text-[var(--color-text-secondary)] uppercase"
-                          >
-                            DORMANT
-                          </span>
-                          {artifact.verification === 'verified' ? (
-                            <span class="border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-1.5 py-0.5 font-mono-telemetry text-[9px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase">
-                              VERIFIED
-                            </span>
-                          ) : (
-                            <span class="inline-flex items-center gap-1 border border-[var(--color-alert-border)] bg-[var(--color-alert-dim)] px-1.5 py-0.5 font-mono-telemetry text-[9px] font-bold tracking-[0.1em] text-[var(--color-text-primary)] uppercase">
-                              <svg viewBox="0 0 16 16" class="h-3 w-3 text-[var(--color-alert)]" fill="currentColor" aria-hidden="true">
-                                <path d="M8 1.5L15 14H1L8 1.5ZM7.25 6V10H8.75V6H7.25ZM7.25 11.25V12.75H8.75V11.25H7.25Z" />
-                              </svg>
-                              DATA TO VERIFY
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div class="flex flex-wrap items-baseline justify-between gap-2">
-                        <span class="font-serif-display text-2xl leading-tight text-[var(--color-text-primary)]">
-                          {artifact.name}
-                        </span>
-                        <span class="font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-turquoise)] opacity-0 transition-opacity group-aria-pressed:opacity-100">
-                          SELECTED
-                        </span>
-                      </div>
-
-                      <p class="font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
-                        {artifact.site.name} · {coords}
-                      </p>
-
-                      {artifact.sizeFact && (
-                        <p class="font-mono-telemetry text-[10px] text-[var(--color-amber)]">
-                          SCALE · {artifact.sizeFact}
-                        </p>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))
-        }
-      </div>
-
-      <!-- Launch Controls Bar -->
-      <div class="flex flex-col gap-3 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase">
-            Active Flight Plan
-          </p>
-          <p
-            id="expedition-selected-briefing"
-            class="mt-0.5 font-mono-telemetry text-xs text-[var(--color-text-primary)]"
-          >
-            {defaultArtifact ? `${defaultArtifact.name} · ${defaultArtifact.site.name} (${defaultCoords})` : 'No artifact selected'}
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <label class="inline-flex cursor-pointer items-center gap-2 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
-            <input
-              type="checkbox"
-              id="expedition-fullscreen-toggle"
-              class="h-4 w-4 accent-[var(--color-turquoise)]"
-            />
-            <span>Fullscreen on launch</span>
-          </label>
-
-          <button
-            type="button"
-            id="expedition-launch-btn"
-            class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-5 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
-          >
-            <span>Launch Expedition</span>
-            <span aria-hidden="true">-&gt;</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stage Viewport (16:9 on desktop, expands in fullscreen) -->
+    <!-- Main Unified 3D Viewport (Spaceflight -> Powered Landing -> Surface Rover -> Liftoff to Orbit) -->
     <div
       id="expedition-stage"
       data-phase="standby"
-      class="relative min-h-[430px] w-full overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-void)] sm:min-h-0 sm:aspect-video"
+      class="relative min-h-[460px] w-full overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-void)] sm:min-h-0 sm:aspect-video"
     >
       <!-- Pre-Launch Standby Overlay -->
       <div
@@ -238,50 +98,85 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
           <div class="flex items-center gap-2 font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-turquoise)]">
             <span class="h-2 w-2 bg-[var(--color-turquoise)]" aria-hidden="true" />
-            <span>3D ENGINE STANDBY · LAZY-LOADED ON LAUNCH</span>
+            <span>3D SPACE SIMULATOR · UNIFIED ORBIT &amp; SURFACE</span>
           </div>
           <span class="font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]">
-            PROCEDURAL EXTERIOR GEOMETRY · 60 FPS TARGET
+            EARTH &middot; MOON (1.62 M/S&sup2;) &middot; MARS (3.72 M/S&sup2;)
           </span>
         </div>
 
-        <div class="my-auto max-w-2xl space-y-3 py-6">
+        <div class="my-auto max-w-2xl space-y-4 py-4">
           <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-amber)] uppercase">
-            Mission Sequence // 4 Phases
+            Main Flight Simulator // Open Interplanetary Transit
           </p>
           <h3
             id="expedition-standby-title"
             class="font-serif-display text-3xl text-[var(--color-text-primary)] sm:text-4xl"
           >
-            {defaultArtifact ? `Ready for Launch: ${defaultArtifact.name}` : 'Select a Monument Above'}
+            Interplanetary Space &amp; Surface Simulator
           </h3>
           <p
             id="expedition-standby-summary"
             class="text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm"
           >
-            {defaultArtifact ? defaultArtifact.kidSummary ?? defaultArtifact.scientificValue : ''}
+            Fly from Earth orbit to the Moon or Mars, touch down on the landing apron, and drive your miniature rover to all historical monuments placed in their real planetary zones.
           </p>
-          <div class="grid grid-cols-1 gap-2 pt-2 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)] sm:grid-cols-2">
+
+          <div class="flex flex-wrap items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              id="expedition-standby-launch-btn"
+              class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-5 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
+            >
+              <span>Launch Space Simulator</span>
+              <span aria-hidden="true">-&gt;</span>
+            </button>
+            <button
+              type="button"
+              id="expedition-standby-surface-btn"
+              data-expedition-deploy-body="mars"
+              class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-4 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase transition-colors hover:border-[var(--color-amber)]"
+            >
+              <span>Deploy Mars (3 Sites)</span>
+            </button>
+            <button
+              type="button"
+              data-expedition-deploy-body="moon"
+              class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-4 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase transition-colors hover:border-[var(--color-turquoise)]"
+            >
+              <span>Deploy Moon (3 Sites)</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2 pt-1 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)] sm:grid-cols-2">
             <div class="border border-[var(--color-border)] bg-[var(--color-slate)] px-3 py-2">
-              <strong class="text-[var(--color-text-primary)]">DESKTOP:</strong> W/A/S/D or Arrows Drive · Drag Orbit · SPACE Sonar · E Scan/Hold · G Auto-Approach · ESC Pause
+              <strong class="text-[var(--color-text-primary)]">FLIGHT &amp; LANDING:</strong> W/Space Thrust &middot; WASD/Arrows Steer &middot; [1]/[2] Moon/Mars &middot; G Auto-Cruise/Land &middot; R Retry
             </div>
             <div class="border border-[var(--color-border)] bg-[var(--color-slate)] px-3 py-2">
-              <strong class="text-[var(--color-text-primary)]">TOUCH / KEYBOARD:</strong> Left Virtual Joystick · Pulse &amp; Interact Buttons · Full Keyboard Completion
+              <strong class="text-[var(--color-text-primary)]">SURFACE &amp; ORBIT RETURN:</strong> Touch down -> [E] Explore Surface or [L] Launch to Orbit anytime from rover or pad
             </div>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-3 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)]">
-          <span>NO INTERIORS · NO ENEMIES · NO FAIL STATES</span>
-          <span class="text-[var(--color-turquoise)]">CLICK LAUNCH EXPEDITION ABOVE TO INITIALIZE 3D VIEWPORT</span>
+          <span>ONE SEAMLESS ENGINE · ZERO MONUMENT LOCK-INS</span>
+          <label class="inline-flex cursor-pointer items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+            <input
+              type="checkbox"
+              id="expedition-fullscreen-toggle"
+              class="h-3.5 w-3.5 accent-[var(--color-turquoise)]"
+            />
+            <span>Fullscreen on launch</span>
+          </label>
+          <span class="text-[var(--color-turquoise)]">ALL 3 MARS &amp; ALL 3 MOON SITES SPAWN ON THEIR REAL ZONES</span>
         </div>
       </div>
 
-      <!-- 3D Canvas (activated after Launch Expedition click) -->
+      <!-- 3D Canvas (activated after Launch click) -->
       <canvas
         id="expedition-canvas"
         role="img"
-        aria-label="Interactive 3D Surface Expedition viewport showing transit, landing descent, rover exploration, and exterior monument inspection"
+        aria-label="Interactive 3D orbital flight, powered planetary landing, rover surface exploration, and liftoff to orbit viewport"
         class="block h-full w-full outline-none"
         hidden
       ></canvas>
@@ -293,14 +188,14 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         class="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-2.5 sm:p-4"
       >
         <!-- Top HUD Bar -->
-        <div class="pointer-events-auto space-y-1.5">
+        <div class="pointer-events-auto relative z-20 space-y-1.5">
           <div class="flex flex-wrap items-center justify-between gap-2 border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.88)] px-3 py-2 backdrop-blur-xs">
             <div class="flex flex-wrap items-center gap-2">
               <span
                 id="hud-phase-label"
                 class="border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2 py-0.5 font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
               >
-                PHASE 01 // TRANSIT
+                PHASE 01 // SPACE FLIGHT
               </span>
               <span
                 id="hud-target-name"
@@ -329,6 +224,46 @@ const expeditionCatalog = artifacts.map((artifact) => ({
               >
                 Distances compressed - not to scale
               </span>
+              <div id="hud-target-switch" hidden class="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  id="hud-target-moon"
+                  class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
+                >
+                  Moon [1]
+                </button>
+                <button
+                  type="button"
+                  id="hud-target-mars"
+                  class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+                >
+                  Mars [2]
+                </button>
+              </div>
+              <button
+                type="button"
+                id="hud-assist-btn"
+                hidden
+                class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Auto-Cruise [G]
+              </button>
+              <button
+                type="button"
+                id="hud-retry-btn"
+                hidden
+                class="cursor-pointer border border-[var(--color-alert)] bg-[var(--color-alert-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-text-primary)] uppercase"
+              >
+                Retry Landing [R]
+              </button>
+              <button
+                type="button"
+                id="hud-orbit-btn"
+                hidden
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Launch to Orbit [L]
+              </button>
               <button
                 type="button"
                 id="hud-skip-btn"
@@ -367,7 +302,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
           >
             <div class="flex flex-wrap items-center gap-2 text-[var(--color-text-primary)]">
               <span id="hud-site-name"></span>
-              <span class="text-[var(--color-text-secondary)]">·</span>
+              <span class="text-[var(--color-text-secondary)]">&middot;</span>
               <span id="hud-site-coords" class="text-[var(--color-turquoise)]"></span>
             </div>
 
@@ -384,27 +319,85 @@ const expeditionCatalog = artifacts.map((artifact) => ({
           </div>
         </div>
 
-        <!-- 3D-Projected Exterior Hotspot Reticle Buttons Layer -->
+        <!-- 3D-Projected Exterior Hotspot Reticle Buttons Layer (full viewport aligned to canvas) -->
         <div
           id="hud-hotspots-layer"
-          class="pointer-events-none relative flex-1"
+          class="pointer-events-none absolute inset-0 z-10 overflow-hidden"
           aria-label="Monument exterior inspection points"
         ></div>
 
-        <!-- Active Museum-Plaque Hotspot Inspection Card -->
+        <!-- Flex spacer keeping bottom HUD panels docked without shifting projected reticle coordinates -->
+        <div class="pointer-events-none flex-1" aria-hidden="true"></div>
+
+        <!-- Touchdown / Recovery Decision Card (stays inside the same 3D viewport after landing) -->
+        <div
+          id="hud-touchdown-card"
+          hidden
+          role="region"
+          aria-label="Planetary touchdown options"
+          class="pointer-events-auto relative z-20 mx-auto mb-2 w-full max-w-2xl border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.92)] p-4 shadow-lg backdrop-blur-xs sm:p-5"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+            <span
+              id="hud-touchdown-eyebrow"
+              class="font-mono-telemetry text-[10px] font-bold tracking-[0.14em] text-[var(--color-turquoise)] uppercase"
+            >
+              TOUCHDOWN CONFIRMED
+            </span>
+            <span class="font-mono-telemetry text-[9px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
+              SURFACE READY
+            </span>
+          </div>
+          <h4
+            id="hud-touchdown-title"
+            class="mt-2 font-serif-display text-2xl leading-tight text-[var(--color-text-primary)] sm:text-3xl"
+          ></h4>
+          <p
+            id="hud-touchdown-body"
+            class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm"
+          ></p>
+          <div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              id="hud-touchdown-explore-btn"
+              class="cursor-pointer border border-[var(--color-turquoise)] bg-[var(--color-turquoise)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#3ad8c9]"
+            >
+              Explore Surface (Rover) [E]
+            </button>
+            <button
+              type="button"
+              id="hud-touchdown-orbit-btn"
+              class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+            >
+              Launch to Orbit [L]
+            </button>
+            <button
+              type="button"
+              id="hud-touchdown-retry-btn"
+              class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3.5 py-2 font-mono-telemetry text-xs tracking-[0.1em] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)]"
+            >
+              Retry Descent [R]
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Interactive Subsystem Diagnostic & Plaque Card -->
         <div
           id="hud-plaque-card"
           hidden
           role="region"
-          aria-label="Scanned monument exterior telemetry"
-          class="pointer-events-auto mx-auto mb-2 w-full max-w-2xl border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.94)] p-3.5 shadow-lg sm:p-4"
+          aria-label="Interactive monument subsystem diagnostics"
+          class="pointer-events-auto relative z-20 mx-auto mb-2 w-full max-w-2xl border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.95)] p-3.5 shadow-lg sm:p-4"
         >
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
-            <span
-              id="hud-plaque-eyebrow"
-              class="font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
-            ></span>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                id="hud-plaque-eyebrow"
+                class="font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
+              ></span>
+              <div id="hud-plaque-tabs" class="inline-flex items-center gap-1" role="group" aria-label="Subsystems 1 to 5"></div>
+            </div>
+            <div class="flex items-center gap-1.5">
               <span
                 id="hud-plaque-mode-pill"
                 class="border border-[var(--color-border)] bg-[var(--color-slate)] px-1.5 py-0.5 font-mono-telemetry text-[9px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase"
@@ -420,11 +413,39 @@ const expeditionCatalog = artifacts.map((artifact) => ({
               </button>
             </div>
           </div>
-          <h4
-            id="hud-plaque-title"
-            class="mt-2 font-serif-display text-2xl leading-tight text-[var(--color-text-primary)]"
-          ></h4>
-          <p id="hud-plaque-body" class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-primary)] sm:text-sm"></p>
+
+          <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-[1.35fr_1fr] sm:items-start">
+            <div>
+              <h4
+                id="hud-plaque-title"
+                class="font-serif-display text-2xl leading-tight text-[var(--color-text-primary)]"
+              ></h4>
+              <p id="hud-plaque-body" class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-primary)] sm:text-sm"></p>
+            </div>
+
+            <!-- Live Subsystem Waveform & Nominal/Shutdown Comparator -->
+            <div class="border border-[var(--color-border)] bg-[var(--color-void)] p-2.5">
+              <div class="flex items-center justify-between gap-2 font-mono-telemetry text-[9px] tracking-[0.08em] uppercase">
+                <span id="hud-plaque-metric-label" class="text-[var(--color-text-secondary)]"></span>
+                <button
+                  type="button"
+                  id="hud-plaque-sim-toggle"
+                  class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-1.5 py-0.5 text-[var(--color-amber)] hover:border-[var(--color-amber)]"
+                >
+                  NOMINAL OPS
+                </button>
+              </div>
+              <p id="hud-plaque-metric-value" class="mt-1 font-mono-telemetry text-xs font-bold text-[var(--color-turquoise)]"></p>
+              <div id="hud-plaque-wave" class="mt-1.5 h-10 w-full overflow-hidden border border-[var(--color-border)] bg-[color:rgba(19,27,46,0.5)]"></div>
+            </div>
+          </div>
+
+          <p
+            id="hud-plaque-test-result"
+            hidden
+            class="mt-2 border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1.5 font-mono-telemetry text-[10px] leading-snug text-[var(--color-text-primary)]"
+          ></p>
+
           <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2">
             <a
               id="hud-plaque-source"
@@ -433,13 +454,22 @@ const expeditionCatalog = artifacts.map((artifact) => ({
               rel="noopener noreferrer"
               class="font-mono-telemetry text-[10px] text-[var(--color-amber)] underline underline-offset-2"
             ></a>
-            <button
-              type="button"
-              id="hud-plaque-next-btn"
-              class="ml-auto cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
-            >
-              Next Point [E]
-            </button>
+            <div class="ml-auto flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                id="hud-plaque-test-btn"
+                class="cursor-pointer border border-[var(--color-amber)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-amber)] uppercase hover:bg-[var(--color-amber)] hover:text-[var(--color-void)]"
+              >
+                Run Hardware Test [F]
+              </button>
+              <button
+                type="button"
+                id="hud-plaque-next-btn"
+                class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Next Point [E]
+              </button>
+            </div>
           </div>
         </div>
 
@@ -447,7 +477,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         <div
           id="hud-drive-controls"
           hidden
-          class="pointer-events-auto flex items-end justify-between gap-3"
+          class="pointer-events-auto relative z-20 flex items-end justify-between gap-3"
         >
           <!-- Virtual Joystick for Touch / Pointer Driving -->
           <div class="flex items-center gap-2.5">
@@ -463,7 +493,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
               ></div>
             </div>
             <p class="hidden font-mono-telemetry text-[10px] leading-tight text-[var(--color-text-secondary)] sm:block">
-              W/A/S/D or Arrows to Drive<br />Drag Viewport to Look
+              W/A/S/D or Arrows to Drive<br />Drag Viewport to Look &middot; [L] Orbit
             </p>
           </div>
 
@@ -482,6 +512,13 @@ const expeditionCatalog = artifacts.map((artifact) => ({
             >
               Auto-Approach [G]
             </button>
+            <button
+              type="button"
+              id="hud-drive-orbit-btn"
+              class="cursor-pointer border border-[var(--color-amber)] bg-[color:rgba(9,13,22,0.92)] px-3.5 py-2 font-mono-telemetry text-[11px] font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:bg-[var(--color-amber-dim)]"
+            >
+              Launch to Orbit [L]
+            </button>
           </div>
         </div>
 
@@ -489,7 +526,7 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         <div
           id="hud-inspect-controls"
           hidden
-          class="pointer-events-auto flex flex-col gap-2.5 border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.9)] p-3 sm:flex-row sm:items-center sm:justify-between"
+          class="pointer-events-auto relative z-20 flex flex-col gap-2.5 border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.9)] p-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <div class="flex flex-wrap items-center gap-2">
             <span
@@ -526,6 +563,13 @@ const expeditionCatalog = artifacts.map((artifact) => ({
                 class="cursor-pointer border border-[var(--color-border)] bg-[var(--color-void)] px-2 py-1 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-text-primary)]"
               >
                 Drive Mode
+              </button>
+              <button
+                type="button"
+                id="hud-inspect-orbit-btn"
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Launch to Orbit [L]
               </button>
             </div>
           </div>
@@ -570,13 +614,13 @@ const expeditionCatalog = artifacts.map((artifact) => ({
         <div
           id="expedition-pause-overlay"
           hidden
-          class="pointer-events-auto absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-[color:rgba(9,13,22,0.88)] p-6 text-center"
+          class="pointer-events-auto absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-[color:rgba(9,13,22,0.88)] p-6 text-center"
         >
           <p class="font-mono-telemetry text-xs font-bold tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
             SIMULATION PAUSED
           </p>
           <h4 class="font-serif-display text-3xl text-[var(--color-text-primary)]">
-            Expedition Holding Pattern
+            Mission Holding Pattern
           </h4>
           <div class="flex flex-wrap items-center justify-center gap-2.5">
             <button
@@ -591,14 +635,14 @@ const expeditionCatalog = artifacts.map((artifact) => ({
               id="hud-restart-btn"
               class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-4 py-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-text-primary)] uppercase"
             >
-              Restart Mission
+              Return to Orbit Flight
             </button>
             <button
               type="button"
               id="hud-abort-btn"
               class="cursor-pointer border border-[var(--color-border)] bg-[var(--color-void)] px-4 py-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-text-secondary)] uppercase"
             >
-              Change Monument
+              Change Destination
             </button>
           </div>
         </div>
@@ -609,12 +653,12 @@ const expeditionCatalog = artifacts.map((artifact) => ({
           hidden
           role="region"
           aria-label="Expedition completed"
-          class="pointer-events-auto absolute inset-0 z-20 flex flex-col justify-between overflow-y-auto bg-[color:rgba(9,13,22,0.95)] p-5 sm:p-7"
+          class="pointer-events-auto absolute inset-0 z-30 flex flex-col justify-between overflow-y-auto bg-[color:rgba(9,13,22,0.95)] p-5 sm:p-7"
         >
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-amber-border)] pb-3">
             <span class="inline-flex items-center gap-2 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-amber)] uppercase">
               <span class="h-2 w-2 bg-[var(--color-amber)]" aria-hidden="true"></span>
-              DATA RECOVERED · MONUMENT RECORDED
+              DATA RECOVERED &middot; MONUMENT RECORDED
             </span>
             <span
               id="hud-complete-scale"
@@ -642,10 +686,17 @@ const expeditionCatalog = artifacts.map((artifact) => ({
               </a>
               <button
                 type="button"
+                id="hud-complete-orbit-btn"
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Launch to Orbit [L]
+              </button>
+              <button
+                type="button"
                 id="hud-complete-another-btn"
                 class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-void)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase hover:bg-[var(--color-turquoise-dim)]"
               >
-                Inspect another monument
+                Continue Exploring Planet
               </button>
             </div>
             <a
@@ -683,10 +734,10 @@ const expeditionCatalog = artifacts.map((artifact) => ({
       <noscript>
         <div class="flex h-full w-full flex-col items-center justify-center gap-3 bg-reticle-grid p-6 text-center">
           <p class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-turquoise)] uppercase">
-            JAVASCRIPT REQUIRED FOR 3D EXPEDITION
+            JAVASCRIPT REQUIRED FOR 3D SIMULATOR
           </p>
           <p class="max-w-md text-xs text-[var(--color-text-secondary)]">
-            Enable JavaScript to run the WebGL Surface Expedition, or jump directly to the static archival catalog below.
+            Enable JavaScript to run the WebGL Orbital Flight &amp; Surface Explorer, or jump directly to the static archival catalog below.
           </p>
           <a
             href="#archive"
@@ -718,11 +769,6 @@ const expeditionCatalog = artifacts.map((artifact) => ({
     border-color: var(--color-turquoise);
     background-color: var(--color-turquoise-dim);
     color: var(--color-turquoise);
-  }
-
-  .expedition-card[aria-pressed='true'] {
-    border-color: var(--color-turquoise);
-    background-color: var(--color-slate-raised);
   }
 
   .expedition-discovery-pill[data-discovery-state='inspected'] {
