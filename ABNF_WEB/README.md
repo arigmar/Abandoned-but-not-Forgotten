@@ -1,4 +1,4 @@
-# AFTERGLOW — Scientific Monuments Archive
+# ROCKY TEAM — Scientific Monuments Archive
 
 **Tagline:** *"Not space junk. Scientific monuments."*  
 **NASA Space Apps Challenge** front-end telemetry registry and museum plaque archive for inactive rovers, landers, and surface instruments on **Mars and the Moon**.

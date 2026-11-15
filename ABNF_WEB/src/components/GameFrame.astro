@@ -22,7 +22,7 @@ const aspectClass = SITE.gameAspectRatio === '4:3' ? 'aspect-[4/3]' : 'aspect-vi
         hasGameBundle ? (
           <iframe
             src={gameIframeSrc}
-            title="AFTERGLOW Field Simulator"
+            title={`${SITE.name} Field Simulator`}
             class="h-full w-full border-0 bg-[var(--color-void)]"
             loading="lazy"
             allow="fullscreen"

@@ -142,17 +142,72 @@ const { artifacts } = Astro.props;
       </div>
     </dl>
 
-    <!-- Scientific Value -->
+    <!-- Scientific Value & Real-World Scale -->
     <section aria-label="Scientific value">
-      <h4 class="font-mono-telemetry text-[11px] font-bold tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
-        Scientific Significance
-      </h4>
-      <p id="plaque-science" class="mt-2 text-sm leading-relaxed text-[var(--color-text-primary)] sm:text-base"></p>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h4 class="font-mono-telemetry text-[11px] font-bold tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Scientific Significance
+        </h4>
+        <span
+          id="plaque-mode-pill"
+          class="font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-turquoise)] uppercase"
+        >
+          EXPLORER SUMMARY
+        </span>
+      </div>
+      <p
+        id="plaque-size-fact"
+        hidden
+        class="mt-2 inline-block border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[11px] text-[var(--color-amber)]"
+      ></p>
+      <p id="plaque-science" class="mt-2.5 text-sm leading-relaxed text-[var(--color-text-primary)] sm:text-base"></p>
       <p id="plaque-site-desc" class="mt-2 text-xs leading-relaxed text-[var(--color-text-secondary)]"></p>
     </section>
 
     <!-- Hold to Re-establish Symbolic Link -->
     <HoldToLink />
+
+    <!-- Collapsible Space Engineering Mini-Glossary for Young Explorers -->
+    <details
+      id="plaque-glossary"
+      class="border border-[var(--color-border)] bg-[var(--color-void)] px-4 py-3"
+    >
+      <summary class="cursor-pointer font-mono-telemetry text-[11px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase">
+        Space Terms Glossary · 5 Mission Words Explained
+      </summary>
+      <dl class="mt-3 grid grid-cols-1 gap-2.5 border-t border-[var(--color-border)] pt-3 text-xs sm:grid-cols-2">
+        <div>
+          <dt class="font-mono-telemetry text-[11px] font-bold text-[var(--color-text-primary)]">SOL (MARS DAY)</dt>
+          <dd class="mt-0.5 text-[var(--color-text-secondary)]">
+            One full rotation of Mars: 24 hours, 39 minutes, and 35 seconds — almost 40 minutes longer than an Earth day.
+          </dd>
+        </div>
+        <div>
+          <dt class="font-mono-telemetry text-[11px] font-bold text-[var(--color-text-primary)]">REGOLITH</dt>
+          <dd class="mt-0.5 text-[var(--color-text-secondary)]">
+            Loose dust, broken rock, and soil sitting on top of solid bedrock on the Moon or Mars.
+          </dd>
+        </div>
+        <div>
+          <dt class="font-mono-telemetry text-[11px] font-bold text-[var(--color-text-primary)]">SEISMOMETER</dt>
+          <dd class="mt-0.5 text-[var(--color-text-secondary)]">
+            A super-sensitive motion detector that feels Marsquakes or Moonquakes to map deep underground layers.
+          </dd>
+        </div>
+        <div>
+          <dt class="font-mono-telemetry text-[11px] font-bold text-[var(--color-text-primary)]">RTG NUCLEAR BATTERY</dt>
+          <dd class="mt-0.5 text-[var(--color-text-secondary)]">
+            A Radioisotope Thermoelectric Generator that turns steady heat from plutonium-238 decay into electricity without sunlight.
+          </dd>
+        </div>
+        <div class="sm:col-span-2">
+          <dt class="font-mono-telemetry text-[11px] font-bold text-[var(--color-text-primary)]">LASER RETROREFLECTOR</dt>
+          <dd class="mt-0.5 text-[var(--color-text-secondary)]">
+            Special corner-cube mirrors that bounce Earth-based laser pulses straight back so scientists can measure the Moon's exact distance to the millimeter.
+          </dd>
+        </div>
+      </dl>
+    </details>
 
     <!-- Linked Official Sources -->
     <section aria-label="Official mission sources" class="border-t border-[var(--color-border)] pt-4">
@@ -161,5 +216,29 @@ const { artifacts } = Astro.props;
       </h4>
       <ul id="plaque-sources-list" class="mt-2.5 space-y-1.5 font-mono-telemetry text-xs"></ul>
     </section>
+
+    <!-- Previous / Next Monument Stepping -->
+    <nav
+      aria-label="Adjacent monument plaques"
+      class="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-4"
+    >
+      <button
+        type="button"
+        id="plaque-prev"
+        class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        &lt;- Previous Monument
+      </button>
+      <span id="plaque-position-label" class="font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]">
+        1 / 6
+      </span>
+      <button
+        type="button"
+        id="plaque-next"
+        class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Next Monument -&gt;
+      </button>
+    </nav>
   </div>
 </dialog>

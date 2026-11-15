@@ -155,7 +155,7 @@ const clientCatalog = {
                   Registry Plates &amp; Inspection Grid
                 </h3>
                 <p class="mt-0.5 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
-                  MOVE POINTER ACROSS GRID FOR TURQUOISE SCANNER LENS · ALL DATA READABLE AT REST
+                  MOVE POINTER (OR TOGGLE SCAN MODE TO DRAG BY TOUCH) FOR TURQUOISE SCANNER LENS · ALL DATA READABLE AT REST
                 </p>
               </div>
               <button
@@ -170,6 +170,7 @@ const clientCatalog = {
 
             <div
               id="artifact-grid"
+              data-scan-mode="false"
               class="relative grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
             >
               <!-- Functional Scanner Lens Ring (progressive enhancement only) -->

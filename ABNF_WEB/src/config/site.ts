@@ -9,8 +9,8 @@ export interface SiteSection {
 }
 
 export const SITE = {
-  // Alternates: 'SILENT HORIZON' | 'TELEMETRY ZERO' | 'MONUMENTS OF DUST'
-  name: 'AFTERGLOW',
+  // Alternates: 'AFTERGLOW' | 'SILENT HORIZON' | 'TELEMETRY ZERO' | 'MONUMENTS OF DUST'
+  name: 'ROCKY TEAM',
 
   // Alternates:
   // - 'Silent machines. Enduring planetary science.'

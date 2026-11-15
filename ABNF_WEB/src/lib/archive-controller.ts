@@ -7,6 +7,7 @@ import {
   getArtifactTimelineState,
   subscribeMissionClock,
 } from './silence';
+import { playSonarTone } from './sonar';
 
 interface CatalogPayload {
   artifacts: Artifact[];
@@ -14,9 +15,17 @@ interface CatalogPayload {
   maxYear: number;
 }
 
+type ReadingMode = 'explorer' | 'technical';
+
+interface StoredDiscoveryState {
+  inspected: string[];
+  recovered: string[];
+}
+
 const RING_CIRCUMFERENCE = 169.65;
 const HOLD_DURATION_MS = 1200;
 const QUICK_TAP_THRESHOLD_MS = 220;
+const DISCOVERY_STORAGE_KEY = 'rocky-team-discovery-v1';
 
 export function initArchiveDashboard(): void {
   const payloadEl = document.getElementById('archive-catalog-data');
@@ -29,7 +38,7 @@ export function initArchiveDashboard(): void {
   const artifactById = new Map<string, Artifact>(artifacts.map((a) => [a.id, a]));
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Read initial URL filters & deep-link artifact
+  // Read initial URL filters, reading mode & deep-link artifact
   const initialParams = new URLSearchParams(window.location.search);
   let activeBody = initialParams.get('body') || 'all';
   if (!['all', 'mars', 'moon'].includes(activeBody)) activeBody = 'all';
@@ -38,14 +47,54 @@ export function initArchiveDashboard(): void {
   const validTypes = new Set(['all', ...artifacts.map((a) => a.type)]);
   if (!validTypes.has(activeType)) activeType = 'all';
 
+  let readingMode: ReadingMode =
+    initialParams.get('mode') === 'technical' ? 'technical' : 'explorer';
+
   let activeArtifactId: string | null = initialParams.get('artifact');
   if (activeArtifactId && !artifactById.has(activeArtifactId)) activeArtifactId = null;
 
   let scrubYear = maxYear;
 
+  const inspectedIds = new Set<string>();
+  const recoveredIds = new Set<string>();
+
+  try {
+    const raw = window.sessionStorage.getItem(DISCOVERY_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<StoredDiscoveryState>;
+      for (const id of parsed.inspected ?? []) {
+        if (artifactById.has(id)) inspectedIds.add(id);
+      }
+      for (const id of parsed.recovered ?? []) {
+        if (artifactById.has(id)) {
+          inspectedIds.add(id);
+          recoveredIds.add(id);
+        }
+      }
+    }
+  } catch {
+    // Ignore storage unavailability
+  }
+
+  const saveDiscoveryState = () => {
+    try {
+      const data: StoredDiscoveryState = {
+        inspected: [...inspectedIds],
+        recovered: [...recoveredIds],
+      };
+      window.sessionStorage.setItem(DISCOVERY_STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // Ignore storage unavailability
+    }
+  };
+
   // DOM References
   const bodyButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter-body]'));
   const typeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter-type]'));
+  const readingModeButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('[data-reading-mode]'),
+  );
+  const readingHintEl = document.getElementById('reading-mode-hint');
   const liveStatusEl = document.getElementById('filter-live-status');
   const resetInlineBtn = document.getElementById('reset-filters-inline');
   const emptyStateEl = document.getElementById('archive-empty-state');
@@ -59,8 +108,15 @@ export function initArchiveDashboard(): void {
   const kpiLatestDateEl = document.querySelector<HTMLElement>('[data-kpi="latest-date"]');
   const kpiLatestNameEl = document.querySelector<HTMLElement>('[data-kpi="latest-name"]');
 
+  const discoveryInspectedEl = document.querySelector<HTMLElement>('[data-discovery="inspected"]');
+  const discoveryRecoveredEl = document.querySelector<HTMLElement>('[data-discovery="recovered"]');
+  const discoveryInspectedBar = document.querySelector<HTMLElement>('[data-discovery-bar="inspected"]');
+  const discoveryRecoveredBar = document.querySelector<HTMLElement>('[data-discovery-bar="recovered"]');
+
   const cardEls = Array.from(document.querySelectorAll<HTMLElement>('[data-artifact-card]'));
   const cardSilenceEls = Array.from(document.querySelectorAll<HTMLElement>('[data-card-silence]'));
+  const cardSummaryEls = Array.from(document.querySelectorAll<HTMLElement>('[data-card-summary]'));
+  const discoveryPills = Array.from(document.querySelectorAll<HTMLElement>('[data-discovery-pill]'));
   const atlasPins = Array.from(document.querySelectorAll<SVGGElement>('[data-atlas-pin]'));
   const atlasChips = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-atlas-chip]'));
   const atlasCountMars = document.querySelector<HTMLElement>('[data-atlas-count="mars"]');
@@ -86,6 +142,9 @@ export function initArchiveDashboard(): void {
   const dialog = document.getElementById('plaque-dialog') as HTMLDialogElement | null;
   const plaqueCloseBtn = document.getElementById('plaque-close') as HTMLButtonElement | null;
   const plaqueCopyBtn = document.getElementById('plaque-copy-link') as HTMLButtonElement | null;
+  const plaquePrevBtn = document.getElementById('plaque-prev') as HTMLButtonElement | null;
+  const plaqueNextBtn = document.getElementById('plaque-next') as HTMLButtonElement | null;
+  const plaquePositionLabel = document.getElementById('plaque-position-label');
   const plaqueVerifBadge = document.getElementById('plaque-verification-badge');
   const plaqueVerifNote = document.getElementById('plaque-verification-note');
   const plaqueMetaTop = document.getElementById('plaque-meta-top');
@@ -96,6 +155,8 @@ export function initArchiveDashboard(): void {
   const plaqueSite = document.getElementById('plaque-site');
   const plaqueCoords = document.getElementById('plaque-coords');
   const plaqueEndCause = document.getElementById('plaque-end-cause');
+  const plaqueModePill = document.getElementById('plaque-mode-pill');
+  const plaqueSizeFact = document.getElementById('plaque-size-fact');
   const plaqueScience = document.getElementById('plaque-science');
   const plaqueSiteDesc = document.getElementById('plaque-site-desc');
   const plaqueSourcesList = document.getElementById('plaque-sources-list');
@@ -132,12 +193,92 @@ export function initArchiveDashboard(): void {
     if (activeType === 'all') params.delete('type');
     else params.set('type', activeType);
 
+    if (readingMode === 'explorer') params.delete('mode');
+    else params.set('mode', readingMode);
+
     if (!activeArtifactId) params.delete('artifact');
     else params.set('artifact', activeArtifactId);
 
     const qs = params.toString();
     const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
     window.history.replaceState(null, '', nextUrl);
+  };
+
+  const getArtifactScienceText = (artifact: Artifact): string => {
+    if (readingMode === 'explorer' && artifact.kidSummary) {
+      return artifact.kidSummary;
+    }
+    return artifact.scientificValue;
+  };
+
+  const applyReadingMode = () => {
+    for (const btn of readingModeButtons) {
+      btn.setAttribute(
+        'aria-pressed',
+        btn.dataset.readingMode === readingMode ? 'true' : 'false',
+      );
+    }
+
+    if (readingHintEl) {
+      readingHintEl.textContent =
+        readingMode === 'explorer'
+          ? 'EXPLORER MODE · PLAIN-ENGLISH SUMMARIES & REAL-WORLD SIZE COMPARISONS'
+          : 'MISSION LOG · FULL TECHNICAL SCIENTIFIC & ARCHIVAL TELEMETRY';
+    }
+
+    for (const el of cardSummaryEls) {
+      const nextText =
+        readingMode === 'explorer'
+          ? el.dataset.kidText || el.dataset.techText || ''
+          : el.dataset.techText || '';
+      el.textContent = nextText;
+    }
+
+    if (plaqueModePill) {
+      plaqueModePill.textContent =
+        readingMode === 'explorer' ? 'EXPLORER SUMMARY' : 'MISSION LOG';
+    }
+
+    if (openPlaqueArtifact && plaqueScience) {
+      plaqueScience.textContent = getArtifactScienceText(openPlaqueArtifact);
+    }
+  };
+
+  const updateDiscoveryUI = () => {
+    const total = Math.max(1, artifacts.length);
+    const inspectedCount = inspectedIds.size;
+    const recoveredCount = recoveredIds.size;
+
+    if (discoveryInspectedEl) discoveryInspectedEl.textContent = String(inspectedCount);
+    if (discoveryRecoveredEl) discoveryRecoveredEl.textContent = String(recoveredCount);
+    if (discoveryInspectedBar) {
+      discoveryInspectedBar.style.width = `${((inspectedCount / total) * 100).toFixed(1)}%`;
+    }
+    if (discoveryRecoveredBar) {
+      discoveryRecoveredBar.style.width = `${((recoveredCount / total) * 100).toFixed(1)}%`;
+    }
+
+    for (const card of cardEls) {
+      const id = card.dataset.artifactCard || '';
+      const state = recoveredIds.has(id)
+        ? 'recovered'
+        : inspectedIds.has(id)
+          ? 'inspected'
+          : 'dormant';
+      card.dataset.discoveryState = state;
+    }
+
+    for (const pill of discoveryPills) {
+      const id = pill.dataset.discoveryPill || '';
+      const state = recoveredIds.has(id)
+        ? 'recovered'
+        : inspectedIds.has(id)
+          ? 'inspected'
+          : 'dormant';
+      pill.dataset.discoveryState = state;
+      pill.textContent =
+        state === 'recovered' ? 'RECOVERED' : state === 'inspected' ? 'INSPECTED' : 'DORMANT';
+    }
   };
 
   const updateLiveClocks = (nowMs: number) => {
@@ -304,36 +445,54 @@ export function initArchiveDashboard(): void {
     syncUrlParams();
   };
 
-  // Filter Event Listeners
+  // Filter & Reading Mode Event Listeners
   for (const btn of bodyButtons) {
     btn.addEventListener('click', () => {
       activeBody = btn.dataset.filterBody || 'all';
       applyFilters();
+      playSonarTone('tick');
     });
   }
   for (const btn of typeButtons) {
     btn.addEventListener('click', () => {
       activeType = btn.dataset.filterType || 'all';
       applyFilters();
+      playSonarTone('tick');
+    });
+  }
+  for (const btn of readingModeButtons) {
+    btn.addEventListener('click', () => {
+      readingMode = btn.dataset.readingMode === 'technical' ? 'technical' : 'explorer';
+      applyReadingMode();
+      syncUrlParams();
+      playSonarTone('tick');
     });
   }
   const resetAllFilters = () => {
     activeBody = 'all';
     activeType = 'all';
     applyFilters();
+    playSonarTone('tick');
   };
   resetInlineBtn?.addEventListener('click', resetAllFilters);
   emptyResetBtn?.addEventListener('click', resetAllFilters);
 
   // Scrubber Event Listeners
+  let lastTickToneMs = 0;
   scrubberInput?.addEventListener('input', () => {
     scrubYear = Number.parseInt(scrubberInput.value, 10) || maxYear;
     updateTimelineState();
+    const now = performance.now();
+    if (now - lastTickToneMs > 95) {
+      lastTickToneMs = now;
+      playSonarTone('tick');
+    }
   });
   scrubberResetBtn?.addEventListener('click', () => {
     scrubYear = maxYear;
     if (scrubberInput) scrubberInput.value = String(maxYear);
     updateTimelineState();
+    playSonarTone('tick');
   });
 
   // Lifeline Tooltip Hover / Focus
@@ -393,7 +552,10 @@ export function initArchiveDashboard(): void {
     });
   }
 
-  // Scanner Lens Progressive Enhancement
+  // Scanner Lens Progressive Enhancement (mouse hover + touch drag when Scan Mode is ON)
+  let lastScanToneMs = 0;
+  let lastScannedCardId = '';
+
   const updateLensHits = (clientX: number, clientY: number) => {
     if (!gridContainer || !lensEl) return;
     const rect = gridContainer.getBoundingClientRect();
@@ -403,32 +565,59 @@ export function initArchiveDashboard(): void {
     lensEl.style.top = `${y}px`;
     lensEl.hidden = false;
 
+    let closestCardId = '';
+    let closestDist = 9999;
+
     for (const card of cardEls) {
       if (card.hidden) continue;
       const cRect = card.getBoundingClientRect();
       const nearestX = Math.max(cRect.left, Math.min(clientX, cRect.right));
       const nearestY = Math.max(cRect.top, Math.min(clientY, cRect.bottom));
       const dist = Math.hypot(clientX - nearestX, clientY - nearestY);
-      card.dataset.lensHit = dist <= 85 ? 'true' : 'false';
+      const isHit = dist <= 85;
+      card.dataset.lensHit = isHit ? 'true' : 'false';
+      if (isHit && dist < closestDist) {
+        closestDist = dist;
+        closestCardId = card.dataset.artifactCard || '';
+      }
+    }
+
+    if (scanModeEnabled && closestCardId && closestCardId !== lastScannedCardId) {
+      lastScannedCardId = closestCardId;
+      const now = performance.now();
+      if (now - lastScanToneMs > 160) {
+        lastScanToneMs = now;
+        playSonarTone('scan');
+      }
     }
   };
 
   const clearLensHits = () => {
     if (lensEl) lensEl.hidden = true;
+    lastScannedCardId = '';
     for (const card of cardEls) {
       card.dataset.lensHit = scanModeEnabled ? 'true' : 'false';
     }
   };
 
+  gridContainer?.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch' && scanModeEnabled) {
+      updateLensHits(e.clientX, e.clientY);
+    }
+  });
   gridContainer?.addEventListener('pointermove', (e) => {
     if (e.pointerType === 'touch' && !scanModeEnabled) return;
     updateLensHits(e.clientX, e.clientY);
   });
   gridContainer?.addEventListener('pointerleave', clearLensHits);
+  gridContainer?.addEventListener('pointercancel', clearLensHits);
 
   scanToggleBtn?.addEventListener('click', () => {
     scanModeEnabled = !scanModeEnabled;
     scanToggleBtn.setAttribute('aria-pressed', scanModeEnabled ? 'true' : 'false');
+    if (gridContainer) {
+      gridContainer.dataset.scanMode = scanModeEnabled ? 'true' : 'false';
+    }
     if (scanStatusLabel) {
       scanStatusLabel.textContent = scanModeEnabled ? 'SCAN MODE: ON' : 'SCAN MODE: OFF';
     }
@@ -438,6 +627,7 @@ export function initArchiveDashboard(): void {
     if (!scanModeEnabled && lensEl) {
       lensEl.hidden = true;
     }
+    playSonarTone(scanModeEnabled ? 'scan' : 'tick');
   });
 
   // HoldToLink Symbolic Reactivation Logic
@@ -475,6 +665,13 @@ export function initArchiveDashboard(): void {
     holdActive = false;
     window.cancelAnimationFrame(holdRafId);
     setLinkVisualState('recovered', 1);
+    if (openPlaqueArtifact) {
+      inspectedIds.add(openPlaqueArtifact.id);
+      recoveredIds.add(openPlaqueArtifact.id);
+      saveDiscoveryState();
+      updateDiscoveryUI();
+    }
+    playSonarTone('recover');
   };
 
   const resetHoldLink = () => {
@@ -556,15 +753,27 @@ export function initArchiveDashboard(): void {
     const artifact = artifactById.get(id);
     if (!artifact || !dialog) return;
 
+    const wasOpen = dialog.open;
     openPlaqueArtifact = artifact;
     activeArtifactId = id;
-    const activeDocEl = document.activeElement;
-    lastTriggerEl =
-      trigger ??
-      (activeDocEl instanceof HTMLElement || activeDocEl instanceof SVGElement
-        ? activeDocEl
-        : null);
+    if (!wasOpen) {
+      const activeDocEl = document.activeElement;
+      lastTriggerEl =
+        trigger ??
+        (activeDocEl instanceof HTMLElement || activeDocEl instanceof SVGElement
+          ? activeDocEl
+          : null);
+    }
+
+    inspectedIds.add(id);
+    saveDiscoveryState();
+    updateDiscoveryUI();
+
     resetHoldLink();
+    if (recoveredIds.has(id)) {
+      isRecovered = true;
+      setLinkVisualState('recovered', 1);
+    }
 
     if (plaqueVerifBadge) {
       plaqueVerifBadge.textContent =
@@ -594,8 +803,31 @@ export function initArchiveDashboard(): void {
     if (plaqueSite) plaqueSite.textContent = artifact.site.name;
     if (plaqueCoords) plaqueCoords.textContent = formatCoordinates(artifact.site.lat, artifact.site.lon);
     if (plaqueEndCause) plaqueEndCause.textContent = artifact.endCause;
-    if (plaqueScience) plaqueScience.textContent = artifact.scientificValue;
+    if (plaqueModePill) {
+      plaqueModePill.textContent =
+        readingMode === 'explorer' ? 'EXPLORER SUMMARY' : 'MISSION LOG';
+    }
+    if (plaqueSizeFact) {
+      if (artifact.sizeFact) {
+        plaqueSizeFact.textContent = `SCALE · ${artifact.sizeFact}`;
+        plaqueSizeFact.hidden = false;
+      } else {
+        plaqueSizeFact.hidden = true;
+      }
+    }
+    if (plaqueScience) plaqueScience.textContent = getArtifactScienceText(artifact);
     if (plaqueSiteDesc) plaqueSiteDesc.textContent = artifact.site.description;
+
+    const navPool = filteredArtifacts.some((a) => a.id === id) ? filteredArtifacts : artifacts;
+    const navIndex = Math.max(
+      0,
+      navPool.findIndex((a) => a.id === id),
+    );
+    if (plaquePositionLabel) {
+      plaquePositionLabel.textContent = `${navIndex + 1} / ${navPool.length}`;
+    }
+    if (plaquePrevBtn) plaquePrevBtn.disabled = navPool.length <= 1;
+    if (plaqueNextBtn) plaqueNextBtn.disabled = navPool.length <= 1;
 
     // Show pre-rendered astro:assets media figure
     for (const slot of plaqueMediaSlots) {
@@ -651,12 +883,26 @@ export function initArchiveDashboard(): void {
 
     if (plaqueCopyBtn) plaqueCopyBtn.textContent = 'Copy link';
     syncUrlParams();
+    playSonarTone('ping');
 
     if (!dialog.open) {
       dialog.showModal();
       plaqueCloseBtn?.focus();
+    } else {
+      dialog.scrollTop = 0;
     }
   }
+
+  const stepPlaque = (delta: number) => {
+    if (!openPlaqueArtifact) return;
+    const navPool = filteredArtifacts.some((a) => a.id === openPlaqueArtifact?.id)
+      ? filteredArtifacts
+      : artifacts;
+    if (navPool.length <= 1) return;
+    const currentIndex = navPool.findIndex((a) => a.id === openPlaqueArtifact?.id);
+    const nextIndex = (currentIndex + delta + navPool.length) % navPool.length;
+    openPlaque(navPool[nextIndex].id, null);
+  };
 
   const closePlaque = () => {
     if (!dialog?.open) return;
@@ -681,7 +927,7 @@ export function initArchiveDashboard(): void {
     if (e.key !== 'Tab' || !dialog.open) return;
     const focusables = Array.from(
       dialog.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        'a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
       ),
     ).filter((el) => !el.hidden && el.offsetParent !== null);
 
@@ -699,6 +945,8 @@ export function initArchiveDashboard(): void {
   });
 
   plaqueCloseBtn?.addEventListener('click', closePlaque);
+  plaquePrevBtn?.addEventListener('click', () => stepPlaque(-1));
+  plaqueNextBtn?.addEventListener('click', () => stepPlaque(1));
 
   plaqueCopyBtn?.addEventListener('click', async () => {
     if (!plaqueCopyBtn) return;
@@ -723,6 +971,8 @@ export function initArchiveDashboard(): void {
 
   // Start shared ticker & apply initial state
   applyFilters();
+  applyReadingMode();
+  updateDiscoveryUI();
   subscribeMissionClock(updateLiveClocks);
 
   if (activeArtifactId) {

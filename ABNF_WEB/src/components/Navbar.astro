@@ -40,7 +40,21 @@ const initialUtc = formatUtcClock(Date.parse(SITE.baseDate));
       }
     </nav>
 
-    <div class="flex shrink-0 items-center gap-3">
+    <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+      <button
+        type="button"
+        id="sonar-audio-toggle"
+        aria-pressed="false"
+        title="Toggle optional radar & telemetry sonar tones"
+        class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+      >
+        <span
+          id="sonar-audio-dot"
+          class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-text-secondary)]"
+          aria-hidden="true"
+        ></span>
+        <span id="sonar-audio-label">AUDIO: OFF</span>
+      </button>
       <div class="hidden sm:flex items-center gap-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)]">
         <span
           class="inline-block h-2 w-2 rounded-full bg-[var(--color-turquoise)]"
@@ -89,10 +103,38 @@ const initialUtc = formatUtcClock(Date.parse(SITE.baseDate));
     border-color: var(--color-turquoise-border);
     background-color: var(--color-turquoise-dim);
   }
+
+  #sonar-audio-toggle[aria-pressed='true'] {
+    border-color: var(--color-turquoise);
+    background-color: var(--color-turquoise-dim);
+    color: var(--color-turquoise);
+  }
 </style>
 
 <script>
   import { formatUtcClock, subscribeMissionClock } from '../lib/silence';
+  import { isSonarEnabled, playSonarTone, setSonarEnabled } from '../lib/sonar';
+
+  const sonarToggleBtn = document.getElementById('sonar-audio-toggle') as HTMLButtonElement | null;
+  const sonarDotEl = document.getElementById('sonar-audio-dot');
+  const sonarLabelEl = document.getElementById('sonar-audio-label');
+
+  sonarToggleBtn?.addEventListener('click', () => {
+    const next = !isSonarEnabled();
+    setSonarEnabled(next);
+    sonarToggleBtn.setAttribute('aria-pressed', next ? 'true' : 'false');
+    if (sonarLabelEl) {
+      sonarLabelEl.textContent = next ? 'SONAR: ON' : 'AUDIO: OFF';
+    }
+    if (sonarDotEl) {
+      sonarDotEl.className = next
+        ? 'inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-turquoise)]'
+        : 'inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-text-secondary)]';
+    }
+    if (next) {
+      playSonarTone('ping');
+    }
+  });
 
   const clockEl = document.getElementById('nav-utc-clock');
   const srClockEl = document.getElementById('nav-utc-sr');

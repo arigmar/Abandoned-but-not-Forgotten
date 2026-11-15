@@ -15,6 +15,8 @@
   },
   "endCause": "A planet-encircling 2018 Martian dust storm darkened the atmosphere above Meridiani Planum, preventing the solar arrays from recharging batteries.",
   "scientificValue": "Engineered for a 90-sol prime mission and a 1,000-meter traverse, Opportunity operated for 5,111 sols and drove 45.16 kilometers across Martian bedrock. Its spectral and microscopic analyses established that liquid water once altered surface rocks and flowed through subsurface fractures in ancient habitable environments.",
+  "kidSummary": "Built to drive just 1 kilometer over 90 Martian days, Opportunity kept exploring for 5,111 sols and drove 45.16 kilometers—discovering ancient rock clues that liquid water once flowed on Mars.",
+  "sizeFact": "5,111 Martian days (sols) · 45.16 km total drive",
   "legacy": [
     {
       "finding": "Identified hematite-rich mineral spherules ('blueberries') embedded in layered sulfate outcrops at Eagle Crater, providing direct geologic evidence of past liquid water.",

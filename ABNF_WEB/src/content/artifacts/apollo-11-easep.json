@@ -15,6 +15,8 @@
   },
   "endCause": "The Passive Seismic Experiment Package (PSEP) command receiver stopped responding at 04:00 UTC on August 25, 1969 due to overheating during lunar midday.",
   "scientificValue": "Deployed during the first human lunar landing, the Early Apollo Scientific Experiments Package (EASEP) established the first seismic and laser-ranging outpost on the Moon. Its telemetry captured the Moon's distinct seismic scattering behavior, while its passive Laser Ranging Retroreflector remains measurable from Earth decades later.",
+  "kidSummary": "Left at Tranquility Base by Apollo 11 astronauts, this science station measured the Moon's first quakes and placed a 100-mirror panel that Earth telescopes still bounce lasers off today.",
+  "sizeFact": "3 weeks of seismic data · 100-prism laser mirror still active",
   "legacy": [
     {
       "finding": "Recorded the first extraterrestrial seismic telemetry via the Passive Seismic Experiment Package across three weeks of surface operation.",

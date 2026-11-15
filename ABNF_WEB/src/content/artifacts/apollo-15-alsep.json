@@ -15,6 +15,8 @@
   },
   "endCause": "Transmitters across the active ALSEP network were permanently commanded off by NASA Johnson Space Center on September 30, 1977 due to ground-network budget constraints.",
   "scientificValue": "Powered continuously by a SNAP-27 radioisotope thermoelectric generator, the Apollo 15 ALSEP transmitted surface geophysics telemetry for more than six years. Together with partner stations, it pinned down deep moonquake depths, measured endogenous lunar heat flow, and characterized the Moon's crust and upper mantle.",
+  "kidSummary": "Powered by a nuclear SNAP-27 battery instead of sunlight, this Apollo 15 station measured moonquakes and deep lunar heat continuously for over six years—even through freezing two-week lunar nights.",
+  "sizeFact": "6+ years active (75 lunar cycles) · SNAP-27 nuclear battery",
   "legacy": [
     {
       "finding": "Conducted the first direct subsurface lunar heat-flow measurements using borehole thermal probes drilled into regolith at Hadley–Apennine.",

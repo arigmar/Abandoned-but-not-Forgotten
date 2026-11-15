@@ -22,6 +22,8 @@ const artifacts = defineCollection({
       }),
       endCause: z.string(),
       scientificValue: z.string(),
+      kidSummary: z.string().optional(),
+      sizeFact: z.string().optional(),
       legacy: z
         .array(
           z.object({

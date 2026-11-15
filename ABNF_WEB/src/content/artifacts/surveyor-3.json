@@ -15,6 +15,8 @@
   },
   "endCause": "Communications ended after sunset on May 4, 1967 as the lander entered lunar night; electronics did not reactivate after the two-week cryogenic freeze.",
   "scientificValue": "Surveyor 3 conducted the first in-situ mechanical trenching of lunar regolith alongside 6,315 television images, confirming that lunar soil possessed enough bearing strength to support crewed Apollo landings. Thirty-one months later, Apollo 12 astronauts inspected the dormant lander and returned its camera assembly to Earth to study long-term space exposure.",
+  "kidSummary": "Surveyor 3 scooped trenches up to 17.5 centimeters deep in Moon dust to prove astronauts could safely land there—and 31 months later, Apollo 12 astronauts actually walked over to inspect it.",
+  "sizeFact": "6,315 TV images · 17.5 cm regolith trench · Revisited by Apollo 12",
   "legacy": [
     {
       "finding": "Transmitted 6,315 high-resolution television frames mapping the inner slope of Surveyor Crater in Oceanus Procellarum.",

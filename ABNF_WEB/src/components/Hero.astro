@@ -62,10 +62,10 @@ const radarNodesJson = JSON.stringify(radarNodes);
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <radialGradient id="hero-radar-sector" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#2EC4B6" stop-opacity="0.16" />
-            <stop offset="75%" stop-color="#2EC4B6" stop-opacity="0.06" />
-            <stop offset="100%" stop-color="#2EC4B6" stop-opacity="0" />
+          <radialGradient id="hero-radar-sector" gradientUnits="userSpaceOnUse" cx="220" cy="220" r="202">
+            <stop offset="0%" stop-color="#2EC4B6" stop-opacity="0.22" />
+            <stop offset="75%" stop-color="#2EC4B6" stop-opacity="0.1" />
+            <stop offset="100%" stop-color="#2EC4B6" stop-opacity="0.02" />
           </radialGradient>
         </defs>
 
@@ -87,13 +87,13 @@ const radarNodesJson = JSON.stringify(radarNodes);
         <text x="224" y="416" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="9">180°</text>
         <text x="16" y="216" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="9">270°</text>
 
-        <!-- Sweeping sector arm -->
-        <g id="hero-radar-sweep" class="radar-sweep-arm">
+        <!-- Sweeping sector arm (rotated around (220, 220) in JS for exact radial alignment & dot sync) -->
+        <g id="hero-radar-sweep">
           <path
-            d="M220 220 L220 18 A202 202 0 0 1 312 40 Z"
+            d="M220 220 L128.3 40 A202 202 0 0 1 220 18 Z"
             fill="url(#hero-radar-sector)"
           />
-          <line x1="220" y1="220" x2="220" y2="18" stroke="#2EC4B6" stroke-opacity="0.7" stroke-width="1.5" />
+          <line x1="220" y1="220" x2="220" y2="18" stroke="#2EC4B6" stroke-opacity="0.75" stroke-width="1.5" />
         </g>
 
         <!-- Landing-site dots mapped from catalog -->
@@ -143,10 +143,10 @@ const radarNodesJson = JSON.stringify(radarNodes);
       <div class="mt-8 border border-[var(--color-border-strong)] bg-[color:rgba(19,27,46,0.9)] p-4 sm:p-5">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5">
           <span class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
-            Live Registry Silence · {artifacts.length} Cataloged Instruments (Mars &amp; Moon)
+            Combined Time Since Last Contact · {artifacts.length} Explorers (Mars &amp; Moon)
           </span>
           <span class="font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-turquoise)]">
-            CUMULATIVE UTC
+            LIVE SILENCE CLOCK · UTC
           </span>
         </div>
 
@@ -220,6 +220,7 @@ const radarNodesJson = JSON.stringify(radarNodes);
     formatSilenceCompact,
     subscribeMissionClock,
   } from '../lib/silence';
+  import { playSonarTone } from '../lib/sonar';
 
   interface RadarNodeMeta {
     id: string;
@@ -257,7 +258,9 @@ const radarNodesJson = JSON.stringify(radarNodes);
     updateHeroClock(Date.now());
     subscribeMissionClock(updateHeroClock);
 
-    // Sync radar dot pings to the 16-second sweep angle when motion is allowed
+    // Sync radar sweep rotation around (220, 220) and dot pings to the 16-second sweep angle
+    const sweepEl = document.querySelector<SVGGElement>('#hero-radar-sweep');
+
     if (!reducedMotion && nodes.length > 0) {
       const nodeEls = new Map<string, SVGGElement>();
       for (const el of document.querySelectorAll<SVGGElement>('[data-radar-node]')) {
@@ -272,6 +275,10 @@ const radarNodesJson = JSON.stringify(radarNodes);
         if (!document.hidden) {
           const elapsed = (performance.now() - startTime) % sweepDurationMs;
           const sweepAngle = (elapsed / sweepDurationMs) * 360;
+
+          if (sweepEl) {
+            sweepEl.setAttribute('transform', `rotate(${sweepAngle.toFixed(2)} 220 220)`);
+          }
 
           let closestNode: RadarNodeMeta | null = null;
           let closestDiff = 999;
@@ -294,6 +301,7 @@ const radarNodesJson = JSON.stringify(radarNodes);
             lastPingedId = closestNode.id;
             const silence = formatSilenceCompact(closestNode.lastContactDate, Date.now());
             captionEl.textContent = `PINGING · ${closestNode.name.toUpperCase()} · ${closestNode.body} · SILENT ${silence}`;
+            playSonarTone('ping');
           }
         }
         window.requestAnimationFrame(stepSweep);

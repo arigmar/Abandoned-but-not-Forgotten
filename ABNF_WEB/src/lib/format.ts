@@ -45,6 +45,8 @@ export interface Artifact {
   site: ArtifactSite;
   endCause: string;
   scientificValue: string;
+  kidSummary?: string;
+  sizeFact?: string;
   legacy: ArtifactLegacyItem[];
   verification: VerificationStatus;
   verificationNote?: string;

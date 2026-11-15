@@ -76,6 +76,8 @@ async function normalizeArtifact(
     site: data.site,
     endCause: data.endCause,
     scientificValue: data.scientificValue,
+    kidSummary: data.kidSummary,
+    sizeFact: data.sizeFact,
     legacy: data.legacy,
     verification: data.verification,
     verificationNote: data.verificationNote,
