@@ -1,24 +1,19 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { withBase } from '../lib/base-path';
+import {
+  viewport,
+  createHud,
+  createRenderGate,
+  observeViewportSize,
+  onMissionRestart,
+} from './game-shell';
 
-const contenedor = document.getElementById('juego');
-Object.assign(document.body.style, {
-  margin: '0',
-  padding: '0',
-  overflow: 'hidden',
-  backgroundColor: '#c8643b'
-});
-Object.assign(contenedor.style, {
-  position: 'fixed',
-  inset: '0',
-  width: '100vw',
-  height: '100vh',
-  outline: 'none'
-});
-
-const ancho = () => window.innerWidth;
-const alto  = () => window.innerHeight;
+// The shell layout owns sizing: no body/viewport overrides here, so the same
+// script works full page and embedded in the museum.
+const contenedor = viewport;
+const hud = createHud();
 
 contenedor.setAttribute('tabindex', '0');
 contenedor.focus();
@@ -28,16 +23,16 @@ const escena = new THREE.Scene();
 escena.background = new THREE.Color(0xc8643b);
 escena.fog = new THREE.FogExp2(0xc8643b, 0.0085);
 
-const camara = new THREE.PerspectiveCamera(60, ancho() / alto(), 0.1, 3000);
+const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 3000);
 camara.position.set(0, 8, 22);
 camara.lookAt(0, 6, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(ancho(), alto());
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 contenedor.appendChild(renderer.domElement);
+observeViewportSize(renderer, camara, contenedor);
 
 escena.add(new THREE.HemisphereLight(0xffb88c, 0x5c2410, 1.35));
 const sol = new THREE.DirectionalLight(0xfff0dd, 2.5);
@@ -73,8 +68,11 @@ const brilloTierra = new THREE.Mesh(
 );
 grupoTierraLejana.add(brilloTierra);
 
+// The original bundle referenced earth__terra_-_downloadable_model.glb, which is
+// not in the repository and only produced a console error. earth.glb is the
+// Earth model that actually ships with the project.
 cargador.load(
-  '/assets/games/earth__terra_-_downloadable_model.glb',
+  withBase('/assets/games/earth.glb'),
   (gltf) => {
     grupoTierraLejana.remove(tierraRespaldo);
     const modeloTierra = gltf.scene;
@@ -122,7 +120,10 @@ cargador.load(
     grupoTierraLejana.add(modeloTierra);
   },
   undefined,
-  (err) => console.error('Error cargando Tierra lejana:', err)
+  (err) => {
+    console.error('Failed to load distant Earth, keeping fallback sphere:', err);
+    grupoTierraLejana.add(tierraRespaldo);
+  }
 );
 
 function crearTexturaMarte() {
@@ -169,7 +170,7 @@ const grupoEscenario = new THREE.Group();
 escena.add(grupoEscenario);
 
 cargador.load(
-  '/assets/games/perseverance_rover_on_mars.glb',
+  withBase('/assets/games/perseverance_rover_on_mars.glb'),
   (gltf) => {
     const modeloSuelo = gltf.scene;
 
@@ -210,7 +211,7 @@ cargador.load(
     grupoEscenario.add(modeloSuelo);
   },
   undefined,
-  (err) => console.error('Error cargando perseverance_rover_on_mars.glb:', err)
+  (err) => console.error('Failed to load perseverance_rover_on_mars.glb:', err)
 );
 
 const MITAD_PLATAFORMA = 1.6;
@@ -247,7 +248,7 @@ nave.add(conoTemporal);
 
 const materialesNave = [];
 cargador.load(
-  '/assets/games/spaceship.glb',
+  withBase('/assets/games/spaceship.glb'),
   (gltf) => {
     nave.remove(conoTemporal);
     const modeloNave = gltf.scene;
@@ -277,7 +278,7 @@ cargador.load(
     nave.add(modeloNave);
   },
   undefined,
-  (err) => console.error('Error cargando spaceship.glb:', err)
+  (err) => console.error('Failed to load spaceship.glb:', err)
 );
 
 function pintarEstadoNave(hexColor) {
@@ -321,6 +322,7 @@ function reiniciar() {
   combustible = COMBUSTIBLE_MAX;
   estado = 'volando';
   velImpacto = 0;
+  motivo = '';
   pintarEstadoNave(0xffffff);
   bordeLuminoso.material.color.setHex(0x00ffcc);
   nave.rotation.z = 0;
@@ -330,6 +332,7 @@ function reiniciar() {
   plataforma.position.x = x;
 }
 reiniciar();
+onMissionRestart(reiniciar);
 
 const teclas = {};
 const TECLAS_JUEGO = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
@@ -337,6 +340,10 @@ window.addEventListener('keydown', (e) => {
   if (TECLAS_JUEGO.includes(e.code)) e.preventDefault();
   teclas[e.code] = true;
   teclas[e.key.toLowerCase()] = true;
+
+  if ((e.code === 'KeyR' || e.key.toLowerCase() === 'r') && estado !== 'volando') {
+    reiniciar();
+  }
 }, { passive: false });
 
 window.addEventListener('keyup', (e) => {
@@ -344,11 +351,19 @@ window.addEventListener('keyup', (e) => {
   teclas[e.key.toLowerCase()] = false;
 });
 
-const hud = document.getElementById('hud');
+window.addEventListener('blur', () => {
+  for (const k in teclas) teclas[k] = false;
+});
+
 const reloj = new THREE.Clock();
+const gate = createRenderGate(contenedor);
 
 function actualizar() {
+  requestAnimationFrame(actualizar);
+
   const dt = Math.min(reloj.getDelta(), 0.05);
+  if (!gate.active) return;
+
   let motorPrendido = false;
 
   grupoTierraLejana.rotation.y += 0.08 * dt;
@@ -396,12 +411,12 @@ function actualizar() {
 
       if (velImpacto > VEL_SEGURA) {
         estado = 'estrellado';
-        motivo = `Caíste muy rápido (${velImpacto.toFixed(1)} m/s).`;
+        motivo = `Descent too fast (${velImpacto.toFixed(1)} m/s).`;
         pintarEstadoNave(0xff3333);
         bordeLuminoso.material.color.setHex(0xff3333);
       } else if (velLateralImpacto > VEL_LATERAL_SEGURA) {
         estado = 'estrellado';
-        motivo = `Ibas muy rápido de lado (${velLateralImpacto.toFixed(1)} m/s).`;
+        motivo = `Lateral speed too high (${velLateralImpacto.toFixed(1)} m/s).`;
         pintarEstadoNave(0xff3333);
         bordeLuminoso.material.color.setHex(0xff3333);
       } else if (!enPlataforma) {
@@ -414,8 +429,6 @@ function actualizar() {
         bordeLuminoso.material.color.setHex(0x44ff66);
       }
     }
-  } else if (teclas['KeyR'] || teclas['r']) {
-    reiniciar();
   }
 
   nave.position.set(posX, posY, 0);
@@ -426,36 +439,38 @@ function actualizar() {
 
   const caida = -velY;
   const altura = posY - MITAD_ALTURA;
-  const rojo = '#ff5555';
-  const colorCaida = caida > VEL_SEGURA ? rojo : '#ffffff';
-  const colorLateral = Math.abs(velX) > VEL_LATERAL_SEGURA ? rojo : '#ffffff';
-  const colorComb = combustible < 25 ? rojo : '#ffffff';
+  const colorCaida = caida > VEL_SEGURA ? 'hud-danger' : '';
+  const colorLateral = Math.abs(velX) > VEL_LATERAL_SEGURA ? 'hud-danger' : '';
+  const colorComb = combustible < 25 ? 'hud-danger' : '';
 
   let mensaje = '';
-  if (estado === 'aterrizado') mensaje = '¡Aterrizaje exitoso en Marte! (R para reiniciar)';
-  if (estado === 'fuera')      mensaje = 'Aterrizaste fuera de la plataforma. (R para reiniciar)';
-  if (estado === 'estrellado') mensaje = `Te estrellaste. ${motivo} (R para reiniciar)`;
-
-  if (hud) {
-    hud.innerHTML = `
-      <b>GRAVEDAD MARCIANA: 3.72 m/s²</b><br>
-      Altitud: ${altura.toFixed(1)} m<br>
-      <span style="color:${colorCaida}">Velocidad vertical: ${caida.toFixed(1)} m/s</span><br>
-      <span style="color:${colorLateral}">Velocidad lateral: ${Math.abs(velX).toFixed(1)} m/s</span><br>
-      <span style="color:${colorComb}">Combustible: ${Math.round(combustible)}%</span><br>
-      <br>
-      <b>${mensaje}</b><br>
-      <small>Espacio/↑/W: motor · ←/→/AD: moverse · R: reiniciar</small>
+  if (estado === 'aterrizado') {
+    mensaje = `
+      <span class="hud-ok"><b>SOFT LANDING ON MARS</b></span><br>
+      Touchdown confirmed on the pad. Press <b>[ R ]</b> or <b>Restart</b> to fly again.
+    `;
+  } else if (estado === 'fuera') {
+    mensaje = `
+      <span class="hud-warning"><b>OFF THE LANDING PAD</b></span><br>
+      You touched down outside the platform. Press <b>[ R ]</b> or <b>Restart</b> to retry.
+    `;
+  } else if (estado === 'estrellado') {
+    mensaje = `
+      <span class="hud-danger"><b>HARD IMPACT</b></span><br>
+      ${motivo} Press <b>[ R ]</b> or <b>Restart</b> to retry.
     `;
   }
 
+  hud.setTelemetry(`
+    <span class="game-hud__title">Martian gravity: 3.72 m/s&sup2;</span>
+    Altitude ${altura.toFixed(1)} m<br>
+    <span class="${colorCaida}">Vertical speed ${caida.toFixed(1)} m/s</span><br>
+    <span class="${colorLateral}">Lateral speed ${Math.abs(velX).toFixed(1)} m/s</span><br>
+    <span class="${colorComb}">Fuel ${Math.round(combustible)}%</span>
+    <span class="game-hud__controls">[Space / &uarr; / W] Engine · [&larr; &rarr; / A D] Lateral thrust · [R] Restart · Land on the glowing pad under 2.5 m/s</span>
+  `);
+  hud.setStatus(mensaje);
+
   renderer.render(escena, camara);
-  requestAnimationFrame(actualizar);
 }
 actualizar();
-
-window.addEventListener('resize', () => {
-  camara.aspect = ancho() / alto();
-  camara.updateProjectionMatrix();
-  renderer.setSize(ancho(), alto());
-});

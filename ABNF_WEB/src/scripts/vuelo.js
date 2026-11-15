@@ -1,26 +1,31 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { withBase } from '../lib/base-path';
+import {
+  viewport,
+  createHud,
+  createRenderGate,
+  observeViewportSize,
+  onMissionRestart,
+} from './game-shell';
 
-const contenedor = document.getElementById('juego');
-const ancho = () => contenedor.clientWidth || window.innerWidth;
-const alto  = () => contenedor.clientHeight || window.innerHeight;
-const hud = document.getElementById('hud');
+const contenedor = viewport;
+const hud = createHud();
 
 contenedor.setAttribute('tabindex', '0');
-contenedor.style.outline = 'none';
 contenedor.focus();
 contenedor.addEventListener('click', () => contenedor.focus());
 
 const escena = new THREE.Scene();
 escena.background = new THREE.Color(0x010106);
 
-const camara = new THREE.PerspectiveCamera(60, ancho() / alto(), 0.1, 4000);
+const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 4000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(ancho(), alto());
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 contenedor.appendChild(renderer.domElement);
+observeViewportSize(renderer, camara, contenedor);
 
 escena.add(new THREE.AmbientLight(0xffffff, 1.4));
 const sol = new THREE.DirectionalLight(0xfff5e6, 3.0);
@@ -81,7 +86,7 @@ function crearPlaneta({ posicion, radio, colorRespaldo, urlGLB, atmosferaColor =
 
   if (urlGLB) {
     cargador.load(
-      urlGLB,
+      withBase(urlGLB),
       (gltf) => {
         grupo.remove(temporal);
         const modelo = gltf.scene;
@@ -117,7 +122,7 @@ function crearPlaneta({ posicion, radio, colorRespaldo, urlGLB, atmosferaColor =
         grupo.add(modelo);
       },
       undefined,
-      (err) => console.error('Error cargando:', urlGLB, err)
+      (err) => console.error('Failed to load model:', urlGLB, err)
     );
   }
 
@@ -172,7 +177,7 @@ fuego.position.z = 2.4;
 modeloVisualNave.add(fuego);
 
 cargador.load(
-  '/assets/games/spaceship.glb',
+  withBase('/assets/games/spaceship.glb'),
   (gltf) => {
     modeloVisualNave.remove(cuerpoTemporal);
     const modeloNave = gltf.scene;
@@ -201,20 +206,20 @@ cargador.load(
     modeloVisualNave.add(modeloNave);
   },
   undefined,
-  (err) => console.error('Error cargando spaceship.glb:', err)
+  (err) => console.error('Failed to load spaceship.glb:', err)
 );
 
 const flashEntrada = document.createElement('div');
 Object.assign(flashEntrada.style, {
-  position: 'fixed',
+  position: 'absolute',
   inset: '0',
   background: 'radial-gradient(circle, #ffaa44, #d9381e)',
   opacity: '0',
   pointerEvents: 'none',
   transition: 'opacity 0.5s ease',
-  zIndex: '9999'
+  zIndex: '10'
 });
-document.body.appendChild(flashEntrada);
+contenedor.appendChild(flashEntrada);
 
 let estado = 'volando';
 let velocidad = 0;
@@ -230,8 +235,10 @@ function reiniciar() {
   flashEntrada.style.opacity = '0';
   camara.fov = 60;
   camara.updateProjectionMatrix();
+  camara.position.set(0, 3.5, 12);
 }
 reiniciar();
+onMissionRestart(reiniciar);
 
 const teclas = {};
 window.addEventListener('keydown', (e) => {
@@ -257,9 +264,15 @@ window.addEventListener('blur', () => {
 });
 
 const reloj = new THREE.Clock();
+const gate = createRenderGate(contenedor);
 
 function actualizar() {
+  requestAnimationFrame(actualizar);
+
+  // Skip simulation and rendering while off screen or in a hidden tab.
+  // Draining the clock keeps dt small when the mission becomes visible again.
   const dt = Math.min(reloj.getDelta(), 0.05);
+  if (!gate.active) return;
 
   tierra.rotation.y += 0.06 * dt;
   luna.rotation.y   += 0.10 * dt;
@@ -326,33 +339,29 @@ function actualizar() {
       nave.rotateY(Math.PI);
     }
 
-    if (hud) {
-      hud.innerHTML = `
-        <b>MISIÓN: LLEGA A MARTE (Planeta Rojo)</b><br>
-        Marte: ${Math.max(0, distMarte).toFixed(0)} km | Luna: ${Math.max(0, distLuna).toFixed(0)} km | Tierra: ${Math.max(0, distTierra).toFixed(0)} km<br>
-        Velocidad: ${velocidad.toFixed(0)} km/s — [W/Espacio] Acelerar | [A/D/Flechas] Girar | [Arriba/Abajo] Subir/Bajar
-      `;
-    }
+    hud.setTelemetry(`
+      <span class="game-hud__title">Mission: reach Mars (the red planet)</span>
+      Mars ${Math.max(0, distMarte).toFixed(0)} km · Moon ${Math.max(0, distLuna).toFixed(0)} km · Earth ${Math.max(0, distTierra).toFixed(0)} km<br>
+      Speed ${velocidad.toFixed(0)} km/s
+      <span class="game-hud__controls">[W / Space] Thrust · [S] Brake · [A / D / &larr; &rarr;] Turn · [&uarr; &darr;] Pitch</span>
+    `);
+    hud.setStatus('');
   }
 
   else if (estado === 'fallo_luna') {
-    if (hud) {
-      hud.innerHTML = `
-        <span style="color: #ff5555;"><b>¡MISIÓN FALLIDA!</b></span><br>
-        Te acercaste a la Luna (objetivo equivocado).<br>
-        Presiona <b>[ R ]</b> para volver a intentarlo.
-      `;
-    }
+    hud.setStatus(`
+      <span class="hud-danger"><b>MISSION FAILED</b></span><br>
+      You approached the Moon — wrong target.<br>
+      Press <b>[ R ]</b> or hit <b>Restart</b> to try again.
+    `);
   }
 
   else if (estado === 'fallo_tierra') {
-    if (hud) {
-      hud.innerHTML = `
-        <span style="color: #ff5555;"><b>¡MISIÓN ABORTADA!</b></span><br>
-        Regresaste a la atmósfera de la Tierra.<br>
-        Presiona <b>[ R ]</b> para despegar de nuevo hacia Marte.
-      `;
-    }
+    hud.setStatus(`
+      <span class="hud-danger"><b>MISSION ABORTED</b></span><br>
+      You returned to Earth's atmosphere.<br>
+      Press <b>[ R ]</b> or hit <b>Restart</b> to launch again towards Mars.
+    `);
   }
 
   else if (estado === 'acelerando_marte') {
@@ -367,18 +376,17 @@ function actualizar() {
     fuego.visible = true;
     fuego.scale.set(1.5, 1.5, 4 + Math.random() * 2);
 
-    if (hud) {
-      hud.innerHTML = `
-        <span style="color: #ffaa00;"><b>¡ENTRANDO EN ÓRBITA DE MARTE!</b></span><br>
-        Iniciando secuencia de descenso...
-      `;
-    }
+    hud.setStatus(`
+      <span class="hud-warning"><b>ENTERING MARS ORBIT</b></span><br>
+      Starting descent sequence&hellip;
+    `);
 
     if (nave.position.distanceTo(POS_MARTE) < RADIO_MARTE && !redirigiendo) {
       redirigiendo = true;
       flashEntrada.style.opacity = '1';
       setTimeout(() => {
-        window.location.href = '/aterrizaje';
+        // Base-aware and, when embedded, navigates inside the frame on purpose.
+        window.location.href = withBase('/aterrizaje');
       }, 500);
     }
   }
@@ -397,12 +405,5 @@ function actualizar() {
   }
 
   renderer.render(escena, camara);
-  requestAnimationFrame(actualizar);
 }
 actualizar();
-
-window.addEventListener('resize', () => {
-  camara.aspect = ancho() / alto();
-  camara.updateProjectionMatrix();
-  renderer.setSize(ancho(), alto());
-});

@@ -1,14 +1,13 @@
 ---
+import MissionGame from '../layouts/MissionGame.astro';
 ---
-<div id="juego">
-  <div id="hud"></div>
-</div>
 
-<style>
-  #juego { position: relative; width: 100%; height: 80vh; background: #000; }
-  #hud { position: absolute; top: 16px; left: 16px; color: white; font: 20px monospace; }
-</style>
-
-<script>
-  import '../scripts/vuelo.js';
-</script>
+<MissionGame
+  title="Flight to Mars"
+  code="Flight mission / Transit"
+  description="Pilot a small historian drone from Earth to Mars. Thrust, steer and reach the red planet to begin the descent sequence."
+>
+  <script>
+    import '../scripts/vuelo.js';
+  </script>
+</MissionGame>
