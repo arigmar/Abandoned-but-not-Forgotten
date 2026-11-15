@@ -4,6 +4,7 @@ import { SITE } from '../config/site';
 import { getArchiveSnapshot, getArtifacts, type ArtifactType } from '../lib/archive';
 import Navbar from '../components/Navbar.astro';
 import Hero from '../components/Hero.astro';
+import ExpeditionSection from '../components/ExpeditionSection.astro';
 import PendingSection from '../components/PendingSection.astro';
 import KpiStrip from '../components/KpiStrip.astro';
 import Filters from '../components/Filters.astro';
@@ -88,16 +89,30 @@ const clientCatalog = {
       <!-- 01 SIGNAL -->
       <Hero artifacts={artifacts} />
 
-      <!-- 02 STORY (Pending) -->
+      <!-- 02 EXPEDITION (3D Exterior Reconnaissance Game) -->
+      <ExpeditionSection artifacts={artifacts} />
+
+      <!-- 03 SIMULATOR (Active GameFrame) -->
+      <PendingSection
+        id="simulator"
+        number="03"
+        title="Field Simulator — Surface Uplink"
+        description="Interactive Scratch / TurboWarp surface exploration mission (Postcards from Silence) — navigate planetary terrain, locate dormant NASA spacecraft, and establish surface telemetry uplinks."
+        state="active"
+      >
+        <GameFrame />
+      </PendingSection>
+
+      <!-- 04 STORY (Pending) -->
       <PendingSection
         id="story"
-        number="02"
+        number="04"
         title="Mission Context &amp; Scrollytelling"
         description="Guided visual sequence documenting how planetary rovers, landers, and seismic stations transition from active science missions to enduring monuments on Mars and the Moon."
         state="pending"
       />
 
-      <!-- 03 ARCHIVE (Active Dashboard) -->
+      <!-- 05 ARCHIVE (Active Dashboard) -->
       <section
         id="archive"
         data-state="active"
@@ -109,7 +124,7 @@ const clientCatalog = {
           <div class="flex flex-col gap-3 border-b border-[var(--color-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
-                SECTION 03 / 05 · SURFACE ARCHIVE DASHBOARD
+                SECTION 05 / 06 · SURFACE ARCHIVE DASHBOARD
               </p>
               <h2
                 id="archive-heading"
@@ -226,21 +241,10 @@ const clientCatalog = {
         </script>
       </section>
 
-      <!-- 04 SIMULATOR (Pending with GameFrame) -->
-      <PendingSection
-        id="simulator"
-        number="04"
-        title="Field Simulator — Surface Uplink"
-        description="Interactive Scratch / TurboWarp field exploration canvas awaiting the compiled single-HTML mission bundle in public/game/index.html."
-        state="pending"
-      >
-        <GameFrame />
-      </PendingSection>
-
-      <!-- 05 SOURCES & CREDITS (Pending) -->
+      <!-- 06 SOURCES & CREDITS (Pending) -->
       <PendingSection
         id="sources"
-        number="05"
+        number="06"
         title="Sources, Credits &amp; Verification Registry"
         description="Dedicated archival bibliography consolidating NASA Science, NSSDCA Master Catalog entries, PDS coordinates, and open media usage attributions."
         state="pending"

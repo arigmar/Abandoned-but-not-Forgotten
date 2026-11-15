@@ -1,3 +1,14 @@
+import {
+  DISCOVERY_STORAGE_KEY,
+  getReadingMode,
+  markArtifactInspected,
+  markArtifactRecovered,
+  readDiscoveryState,
+  setReadingMode,
+  subscribeDiscoveryChange,
+  subscribeReadingModeChange,
+  type ReadingMode,
+} from './discovery';
 import { formatCoordinates, type Artifact } from './format';
 import {
   computeCombinedSilence,
@@ -15,17 +26,9 @@ interface CatalogPayload {
   maxYear: number;
 }
 
-type ReadingMode = 'explorer' | 'technical';
-
-interface StoredDiscoveryState {
-  inspected: string[];
-  recovered: string[];
-}
-
 const RING_CIRCUMFERENCE = 169.65;
 const HOLD_DURATION_MS = 1200;
 const QUICK_TAP_THRESHOLD_MS = 220;
-const DISCOVERY_STORAGE_KEY = 'rocky-team-discovery-v1';
 
 export function initArchiveDashboard(): void {
   const payloadEl = document.getElementById('archive-catalog-data');
@@ -47,46 +50,19 @@ export function initArchiveDashboard(): void {
   const validTypes = new Set(['all', ...artifacts.map((a) => a.type)]);
   if (!validTypes.has(activeType)) activeType = 'all';
 
-  let readingMode: ReadingMode =
-    initialParams.get('mode') === 'technical' ? 'technical' : 'explorer';
+  let readingMode: ReadingMode = getReadingMode();
 
   let activeArtifactId: string | null = initialParams.get('artifact');
   if (activeArtifactId && !artifactById.has(activeArtifactId)) activeArtifactId = null;
 
   let scrubYear = maxYear;
 
-  const inspectedIds = new Set<string>();
-  const recoveredIds = new Set<string>();
+  const initialDiscovery = readDiscoveryState(artifactById.keys());
+  const inspectedIds = initialDiscovery.inspectedIds;
+  const recoveredIds = initialDiscovery.recoveredIds;
 
-  try {
-    const raw = window.sessionStorage.getItem(DISCOVERY_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<StoredDiscoveryState>;
-      for (const id of parsed.inspected ?? []) {
-        if (artifactById.has(id)) inspectedIds.add(id);
-      }
-      for (const id of parsed.recovered ?? []) {
-        if (artifactById.has(id)) {
-          inspectedIds.add(id);
-          recoveredIds.add(id);
-        }
-      }
-    }
-  } catch {
-    // Ignore storage unavailability
-  }
-
-  const saveDiscoveryState = () => {
-    try {
-      const data: StoredDiscoveryState = {
-        inspected: [...inspectedIds],
-        recovered: [...recoveredIds],
-      };
-      window.sessionStorage.setItem(DISCOVERY_STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      // Ignore storage unavailability
-    }
-  };
+  // Keep storage reference key explicit
+  void DISCOVERY_STORAGE_KEY;
 
   // DOM References
   const bodyButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter-body]'));
@@ -245,6 +221,12 @@ export function initArchiveDashboard(): void {
   };
 
   const updateDiscoveryUI = () => {
+    const latest = readDiscoveryState(artifactById.keys());
+    inspectedIds.clear();
+    for (const id of latest.inspectedIds) inspectedIds.add(id);
+    recoveredIds.clear();
+    for (const id of latest.recoveredIds) recoveredIds.add(id);
+
     const total = Math.max(1, artifacts.length);
     const inspectedCount = inspectedIds.size;
     const recoveredCount = recoveredIds.size;
@@ -463,6 +445,7 @@ export function initArchiveDashboard(): void {
   for (const btn of readingModeButtons) {
     btn.addEventListener('click', () => {
       readingMode = btn.dataset.readingMode === 'technical' ? 'technical' : 'explorer';
+      setReadingMode(readingMode);
       applyReadingMode();
       syncUrlParams();
       playSonarTone('tick');
@@ -666,9 +649,7 @@ export function initArchiveDashboard(): void {
     window.cancelAnimationFrame(holdRafId);
     setLinkVisualState('recovered', 1);
     if (openPlaqueArtifact) {
-      inspectedIds.add(openPlaqueArtifact.id);
-      recoveredIds.add(openPlaqueArtifact.id);
-      saveDiscoveryState();
+      markArtifactRecovered(openPlaqueArtifact.id);
       updateDiscoveryUI();
     }
     playSonarTone('recover');
@@ -765,8 +746,7 @@ export function initArchiveDashboard(): void {
           : null);
     }
 
-    inspectedIds.add(id);
-    saveDiscoveryState();
+    markArtifactInspected(id);
     updateDiscoveryUI();
 
     resetHoldLink();
@@ -967,6 +947,34 @@ export function initArchiveDashboard(): void {
     if (!target) return;
     const id = target.dataset.openPlaque;
     if (id) openPlaque(id, target);
+  });
+
+  // Delegate cross-section links (e.g. from Surface Expedition) to open the monument plaque in Archive
+  document.addEventListener('click', (e) => {
+    const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('[data-open-archive-plaque]');
+    if (!link) return;
+    const id = link.dataset.openArchivePlaque;
+    if (!id || !artifactById.has(id)) return;
+    e.preventDefault();
+    document.getElementById('archive')?.scrollIntoView({
+      behavior: reducedMotion ? 'auto' : 'smooth',
+    });
+    openPlaque(id, link);
+  });
+
+  subscribeDiscoveryChange(() => {
+    updateDiscoveryUI();
+    if (dialog?.open && openPlaqueArtifact && recoveredIds.has(openPlaqueArtifact.id) && !isRecovered) {
+      isRecovered = true;
+      setLinkVisualState('recovered', 1);
+    }
+  });
+
+  subscribeReadingModeChange((nextMode) => {
+    if (readingMode !== nextMode) {
+      readingMode = nextMode;
+      applyReadingMode();
+    }
   });
 
   // Start shared ticker & apply initial state

@@ -28,9 +28,12 @@ src/
   content.config.ts    # Astro 7 Content Layer Zod schema for artifacts
   content/artifacts/   # Static JSON records (one file per spacecraft)
   lib/archive.ts       # Single data-access seam (getArtifacts, getArtifact, getArchiveSnapshot)
+  lib/discovery.ts     # Shared sessionStorage discovery store (#expedition <-> #archive live sync)
   lib/silence.ts       # UTC silence math + shared tab-aware setInterval ticker
+  lib/expedition/      # Lazy-loaded Three.js 3D Surface Expedition (#expedition) + procedural exteriors
   lib/archive-controller.ts
-  pages/index.astro    # Single-page architecture (#signal -> #story -> #archive -> #simulator -> #sources)
+  components/ExpeditionSection.astro
+  pages/index.astro    # Single-page architecture (#signal -> #expedition -> #simulator -> #story -> #archive -> #sources)
   styles/tokens.css    # 60-30-10 color tokens & self-hosted Fontsource stacks
   styles/global.css
 public/
