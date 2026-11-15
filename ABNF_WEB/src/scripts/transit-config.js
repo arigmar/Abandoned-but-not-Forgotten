@@ -22,27 +22,28 @@ export function createTransitConfig(initialTarget = 'mars') {
 
     bodies: [
       // =====================================================
-      // MUNDOS JUGABLES (CRECEN AL ACERCARSE)
+      // MUNDOS JUGABLES (CON BARRERA DE SUPERFICIE Y ESCALA)
       // =====================================================
       {
         id: 'moon',
         label: 'Moon',
         pos: [-240, 45, -280],
         radius: 18,
-        maxProximityScale: 2.35, // Se hace mucho más grande al acercarte
-        proximityRange: 260,
+        maxProximityScale: 2.45,
+        proximityRange: 270,
         mass: 450,
-        fallbackColor: 0x888888,
+        fallbackColor: 0x8a92a0,
         urlGLB: '/assets/games/Lune.glb',
+        textureOpts: { base: '#8a92a0', craters: 120 },
         rotSpeed: 0.1,
         role: 'target',
         showCaptureRing: false,
-        triggerDistance: 18,
-        transitionRadius: 16,
+        triggerDistance: 24,
+        transitionRadius: 18,
         captureFlameColor: 0x9be7ff,
-        captureFlashGradient: 'radial-gradient(circle, rgba(46, 196, 182, 0.55), #090d16 78%)',
+        captureFlashGradient: 'radial-gradient(circle, rgba(46, 196, 182, 0.35), transparent 75%)',
         captureStatusTitle: 'ENTERING LUNAR ORBIT',
-        captureStatusBody: 'Aligning trajectory for powered lunar descent&hellip;',
+        captureStatusBody: 'Approaching lunar surface — aligning descent trajectory&hellip;',
         nextRoute: '/aterrizaje-luna',
       },
       {
@@ -50,22 +51,30 @@ export function createTransitConfig(initialTarget = 'mars') {
         label: 'Mars',
         pos: [380, -35, -1350],
         radius: 42,
-        maxProximityScale: 2.5, // Crece de forma imponente al aproximarse
+        maxProximityScale: 2.55,
         proximityRange: 520,
         mass: 2400,
         fallbackColor: 0xc1440e,
         atmosphereColor: 0xff6622,
         urlGLB: '/assets/games/mars.glb',
+        textureOpts: {
+          base: '#c1440e',
+          craters: 60,
+          bands: [
+            { y: 85, height: 35, color: '#8f2e06', opacity: 0.45 },
+            { y: 170, height: 30, color: '#e06a35', opacity: 0.4 },
+          ],
+        },
         rotSpeed: 0.12,
         role: 'target',
         hasMartianMoons: true,
         showCaptureRing: false,
-        triggerDistance: 46,
-        transitionRadius: 38,
+        triggerDistance: 52,
+        transitionRadius: 42,
         captureFlameColor: 0xffaa44,
-        captureFlashGradient: 'radial-gradient(circle, #ffaa44, #d9381e)',
+        captureFlashGradient: 'radial-gradient(circle, rgba(255, 170, 68, 0.38), transparent 75%)',
         captureStatusTitle: 'ENTERING MARS ORBIT',
-        captureStatusBody: 'Starting powered Martian descent&hellip;',
+        captureStatusBody: 'Approaching Martian atmosphere — starting powered descent&hellip;',
         nextRoute: '/aterrizaje',
       },
       {
@@ -89,7 +98,6 @@ export function createTransitConfig(initialTarget = 'mars') {
 
       // =====================================================
       // DEMÁS PLANETAS DEL SISTEMA SOLAR (DISTANCIAS REALES)
-      // Visibles en el espacio pero inalcanzables para la nave
       // =====================================================
       {
         id: 'mercury',

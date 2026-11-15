@@ -14,7 +14,6 @@ import {
 
 const DRACO_DECODER_URL = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
 
-// Modos de cámara disponibles con la tecla [V] o [C]
 const CAMERA_MODES = [
   { name: 'Standard', offset: new THREE.Vector3(0, 3.3, 11.8), lookAhead: 16, baseFov: 60 },
   { name: 'Close Action', offset: new THREE.Vector3(0, 2.1, 7.2), lookAhead: 24, baseFov: 65 },
@@ -295,11 +294,11 @@ function createPlanet(scene, gltfLoader, spec) {
 
   const procTex = spec.textureOpts ? createProceduralPlanetTexture(spec.textureOpts) : null;
   const fallback = new THREE.Mesh(
-    new THREE.SphereGeometry(spec.radius, 36, 36),
+    new THREE.SphereGeometry(spec.radius, 40, 40),
     new THREE.MeshStandardMaterial({
       color: procTex ? 0xffffff : spec.fallbackColor,
       map: procTex,
-      roughness: 0.8,
+      roughness: 0.82,
       metalness: 0.04,
     })
   );
@@ -463,7 +462,6 @@ export function launchTransitMission(config) {
   const cargador = new GLTFLoader();
   cargador.setDRACOLoader(dracoLoader);
 
-  // Sol con su modelo /assets/games/sun.glb
   const sunObj = config.sun ? createSun(escena, cargador, config.sun) : null;
 
   escena.add(new THREE.AmbientLight(0xffffff, 1.4));
@@ -471,7 +469,6 @@ export function launchTransitMission(config) {
   solLuz.position.set(300, 150, 250);
   escena.add(solLuz);
 
-  // Estrellas y planetas lejanos
   escena.add(
     createStarLayer(5000, 26000, 2.2, 0xffffff, 0.8),
     createStarLayer(1600, 22000, 3.5, 0xaaccff, 0.9),
@@ -479,14 +476,12 @@ export function launchTransitMission(config) {
     crearPlanetasLejanos(220, 4800, 14000)
   );
 
-  // Todos los planetas (jugables y del Sistema Solar)
   const bodies = config.bodies.map((spec) => createPlanet(escena, cargador, spec));
   const targets = bodies.filter((b) => b.role === 'target');
   const playableBodies = bodies.filter((b) => b.role === 'target' || b.role === 'origin');
   const solarSystemBodies = bodies.filter((b) => b.role === 'solar_system');
   const getBody = (id) => bodies.find((b) => b.id === id);
 
-  // Muy pocos meteoritos (8 en total)
   const CANTIDAD_ASTEROIDES = config.asteroidCount ?? 8;
   const geoAsteroide = new THREE.IcosahedronGeometry(1, 1);
   const matAsteroide = new THREE.MeshStandardMaterial({
@@ -597,7 +592,7 @@ export function launchTransitMission(config) {
   Object.assign(flashEntrada.style, {
     position: 'absolute',
     inset: '0',
-    background: 'radial-gradient(circle, #ffaa44, #d9381e)',
+    background: 'radial-gradient(circle, rgba(255, 170, 68, 0.35), transparent 75%)',
     opacity: '0',
     pointerEvents: 'none',
     transition: 'opacity 0.5s ease',
@@ -606,7 +601,7 @@ export function launchTransitMission(config) {
   contenedor.appendChild(flashEntrada);
 
   // ==========================================
-  // 5. FÍSICA DE DESACELERACIÓN MEJORADA Y CÁMARA
+  // 5. FÍSICA, BARRERA LUNAR Y ACERCAMIENTO CONTINUO
   // ==========================================
   const urlParams = new URLSearchParams(window.location.search);
   const departedFrom = urlParams.get('from');
@@ -615,6 +610,7 @@ export function launchTransitMission(config) {
   const vectorVelocidad = new THREE.Vector3(0, 0, 0);
   const velocidadAngular = new THREE.Vector3(0, 0, 0);
   let velocidadEntrada = 0;
+  let captureElapsed = 0;
   let redirigiendo = false;
   let failedTitle = '';
   let failedBodyText = '';
@@ -630,21 +626,48 @@ export function launchTransitMission(config) {
   let elapsedAnim = 0;
   let departureBannerTimer = 0;
 
-  // Parámetros ajustados para aceleración y desaceleración mucho más responsiva
   const VELOCIDAD_MAXIMA = 310;
   const EMPUJE_PRINCIPAL = 135;
-  const EMPUJE_FRENADO = 240; // Frenado potente con [S]
+  const EMPUJE_FRENADO = 240;
   const FRICCION_FRENADO = 4.2;
-  const FRICCION_INERCIAL = 1.65; // Desaceleración suave al soltar [W]
+  const FRICCION_INERCIAL = 1.65;
+  const DISTANCIA_MINIMA_SUPERFICIE = 4.2; // Barrera física: nunca atraviesa la superficie
 
   const steerDummy = new THREE.Object3D();
   const prevForward = new THREE.Vector3();
   const dirFrente = new THREE.Vector3();
   const velDeseada = new THREE.Vector3();
+  const normalPlaneta = new THREE.Vector3();
+  const puntoFrentePlaneta = new THREE.Vector3();
   const camFocusPoint = new THREE.Vector3();
   const idealLookAt = new THREE.Vector3();
   const idealCamPos = new THREE.Vector3();
   const upVector = new THREE.Vector3(0, 1, 0);
+
+  // Impide físicamente que la nave atraviese la Luna, Marte o la Tierra
+  function enforcePlanetaryBarriers() {
+    for (const b of playableBodies) {
+      const effectiveRadius = b.radius * (b.currentScale ?? 1);
+      const minAllowedDist = effectiveRadius + DISTANCIA_MINIMA_SUPERFICIE;
+      const distToCenter = nave.position.distanceTo(b.posVec);
+
+      if (distToCenter < minAllowedDist) {
+        normalPlaneta.subVectors(nave.position, b.posVec);
+        if (normalPlaneta.lengthSq() < 0.0001) {
+          normalPlaneta.set(0, 0, 1);
+        } else {
+          normalPlaneta.normalize();
+        }
+        nave.position.copy(b.posVec).addScaledVector(normalPlaneta, minAllowedDist);
+
+        // Eliminar componente de velocidad que empuje hacia adentro del planeta
+        const velHaciaAdentro = vectorVelocidad.dot(normalPlaneta);
+        if (velHaciaAdentro < 0) {
+          vectorVelocidad.addScaledVector(normalPlaneta, -velHaciaAdentro);
+        }
+      }
+    }
+  }
 
   function selectTarget(targetId) {
     if (!targets.some((b) => b.id === targetId)) return;
@@ -695,6 +718,7 @@ export function launchTransitMission(config) {
     failedTitle = '';
     failedBodyText = '';
     capturingBody = null;
+    captureElapsed = 0;
     redirigiendo = false;
     autopilot = false;
     elapsedAnim = 0;
@@ -794,14 +818,13 @@ export function launchTransitMission(config) {
     const lockedTarget = getBody(selectedTargetId) ?? targets[0];
     const camPreset = CAMERA_MODES[cameraModeIdx];
 
-    // Animar el Sol
     if (sunObj) {
       sunObj.group.rotation.y += 0.02 * dt;
       const pulsoSol = 1 + Math.sin(elapsedAnim * 2) * 0.03;
       sunObj.haloSol.scale.setScalar(pulsoSol);
     }
 
-    // Rotación planetaria, paralaje lejano y CRECIMIENTO DINÁMICO al acercarse
+    // Rotación planetaria y crecimiento progresivo al acercarse
     for (const b of bodies) {
       b.group.rotation.y += (b.rotSpeed ?? 0.06) * dt;
       if (b.moonsPivot) {
@@ -809,14 +832,13 @@ export function launchTransitMission(config) {
       }
       if (b.role === 'solar_system') {
         b.group.position.copy(b.basePos).addScaledVector(nave.position, 0.94);
-      } else if (b.maxProximityScale && b.proximityRange) {
+      } else if (b.maxProximityScale && b.proximityRange && estado === 'volando') {
         const centerDist = nave.position.distanceTo(b.posVec);
         const proxNorm = THREE.MathUtils.clamp(
           1 - (centerDist - b.radius) / b.proximityRange,
           0,
           1
         );
-        // Curva suave para que el planeta se agrande notablemente cuando te acercas
         const targetScale = 1 + (b.maxProximityScale - 1) * (proxNorm * proxNorm);
         b.currentScale = THREE.MathUtils.lerp(b.currentScale, targetScale, 1 - Math.exp(-6 * dt));
         b.group.scale.setScalar(b.currentScale);
@@ -912,7 +934,6 @@ export function launchTransitMission(config) {
         nave.rotateY(velocidadAngular.y * dt);
         nave.rotateX(velocidadAngular.x * dt);
 
-        // Inclinación visual dinámica (bank + pitch) de la nave
         const inclinacionZ = velocidadAngular.y * 0.38;
         const inclinacionX = -velocidadAngular.x * 0.16;
         modeloVisualNave.rotation.z = THREE.MathUtils.lerp(
@@ -930,7 +951,6 @@ export function launchTransitMission(config) {
 
         if (acelerando) {
           vectorVelocidad.addScaledVector(dirFrente, EMPUJE_PRINCIPAL * dt);
-          // Alinear progresivamente el vector de velocidad hacia la proa para evitar derrapes
           const rapidez = Math.min(vectorVelocidad.length(), VELOCIDAD_MAXIMA);
           velDeseada.copy(dirFrente).multiplyScalar(rapidez);
           vectorVelocidad.lerp(velDeseada, 1 - Math.exp(-5.5 * dt));
@@ -939,7 +959,6 @@ export function launchTransitMission(config) {
           fuegoIzq.scale.z = 0.85 + Math.random() * 0.6;
           fuegoDer.scale.z = 0.85 + Math.random() * 0.6;
         } else if (frenando) {
-          // Desaceleración activa mejorada: combina amortiguación exponencial + empuje inverso
           vectorVelocidad.multiplyScalar(Math.exp(-FRICCION_FRENADO * dt));
           const rapidezActual = vectorVelocidad.length();
           if (rapidezActual > 0) {
@@ -948,7 +967,6 @@ export function launchTransitMission(config) {
           }
           grupoPropulsores.visible = false;
         } else {
-          // Desaceleración pasiva suave al soltar el acelerador
           vectorVelocidad.multiplyScalar(Math.exp(-FRICCION_INERCIAL * dt));
           const rapidezActual = vectorVelocidad.length();
           if (rapidezActual > 0) {
@@ -967,7 +985,9 @@ export function launchTransitMission(config) {
 
       nave.position.addScaledVector(vectorVelocidad, dt);
 
-      // Límite de calor solar (Sol)
+      // Barrera física para que jamás atraviese la Luna ni ningún planeta
+      enforcePlanetaryBarriers();
+
       if (sunObj) {
         const distSol = nave.position.distanceTo(sunObj.posVec) - sunObj.radius;
         if (distSol < (sunObj.dangerDistance ?? 950)) {
@@ -982,7 +1002,6 @@ export function launchTransitMission(config) {
         }
       }
 
-      // Colisión con los 8 meteoritos
       if (estado === 'volando') {
         for (let i = 0; i < CANTIDAD_ASTEROIDES; i++) {
           const ast = datosAsteroides[i];
@@ -998,7 +1017,6 @@ export function launchTransitMission(config) {
         }
       }
 
-      // Distancias a la superficie escalada de los mundos jugables (Marte, Luna, Tierra)
       const distances = playableBodies.map((b) => {
         const effectiveRadius = b.radius * (b.currentScale ?? 1);
         return {
@@ -1011,17 +1029,19 @@ export function launchTransitMission(config) {
       if (estado === 'volando') {
         for (const entry of distances) {
           const b = entry.body;
-          if (b.role === 'target' && entry.dist < (b.triggerDistance ?? 40)) {
+          if (b.role === 'target' && entry.dist < (b.triggerDistance ?? 36)) {
             estado = 'acelerando_destino';
             capturingBody = b;
+            captureElapsed = 0;
             autopilot = false;
-            velocidadEntrada = Math.max(vectorVelocidad.length(), 145);
+            velocidadEntrada = Math.max(vectorVelocidad.length(), 160);
             selectedTargetId = b.id;
             emitTargetChanged(b.id);
             modeloVisualNave.rotation.set(0, 0, 0);
             flameMaterial.color.setHex(b.captureFlameColor ?? defaultFlameColor);
             flashEntrada.style.background =
-              b.captureFlashGradient ?? 'radial-gradient(circle, #ffaa44, #d9381e)';
+              b.captureFlashGradient ??
+              'radial-gradient(circle, rgba(155, 231, 255, 0.32), transparent 75%)';
             nave.lookAt(b.posVec);
             nave.rotateY(Math.PI);
             break;
@@ -1083,33 +1103,65 @@ export function launchTransitMission(config) {
         Press <b>[ R ]</b> or hit <b>Restart</b> to launch again.
       `);
     } else if (estado === 'acelerando_destino' && capturingBody) {
-      velocidadEntrada += 350 * dt;
-      nave.translateZ(-velocidadEntrada * dt);
+      captureElapsed += dt;
+      velocidadEntrada = Math.min(velocidadEntrada + 180 * dt, 340);
 
-      if (camara.fov < 115) {
-        camara.fov += 90 * dt;
-        camara.updateProjectionMatrix();
+      // Hacer que la Luna / Marte crezca continuamente frente a ti mientras carga la siguiente escena
+      capturingBody.currentScale = Math.min(
+        (capturingBody.currentScale ?? 1) + dt * 0.55 * (capturingBody.currentScale ?? 1),
+        6.5
+      );
+      capturingBody.group.scale.setScalar(capturingBody.currentScale);
+      if (capturingBody.moonsPivot) {
+        capturingBody.moonsPivot.scale.setScalar(capturingBody.currentScale);
       }
 
+      // Acercar la nave asintóticamente hacia el borde de la Luna SIN atravesarla jamás
+      const effectiveRadius = capturingBody.radius * capturingBody.currentScale;
+      normalPlaneta.subVectors(nave.position, capturingBody.posVec);
+      if (normalPlaneta.lengthSq() < 0.0001) {
+        normalPlaneta.set(0, 0, 1);
+      } else {
+        normalPlaneta.normalize();
+      }
+
+      const standoffRadius = effectiveRadius + DISTANCIA_MINIMA_SUPERFICIE + 1.5;
+      puntoFrentePlaneta.copy(capturingBody.posVec).addScaledVector(normalPlaneta, standoffRadius);
+      nave.position.lerp(puntoFrentePlaneta, 1 - Math.exp(-4.5 * dt));
+
+      // Garantizar barrera dura en todo momento
+      enforcePlanetaryBarriers();
+
+      nave.lookAt(capturingBody.posVec);
+      nave.rotateY(Math.PI);
+
+      // Efecto visual de aproximación continua (FOV + propulsores + resplandor suave que deja ver la Luna)
+      const targetCaptureFov = Math.min(86, camPreset.baseFov + captureElapsed * 14);
+      camara.fov = THREE.MathUtils.lerp(camara.fov, targetCaptureFov, 1 - Math.exp(-5 * dt));
+      camara.updateProjectionMatrix();
+
       grupoPropulsores.visible = true;
-      fuegoIzq.scale.set(1.3, 1.3, 3 + Math.random() * 1.5);
-      fuegoDer.scale.set(1.3, 1.3, 3 + Math.random() * 1.5);
+      fuegoIzq.scale.set(1.3, 1.3, 2.6 + Math.random() * 1.4);
+      fuegoDer.scale.set(1.3, 1.3, 2.6 + Math.random() * 1.4);
+
+      // Distancia visual simulada en el HUD que baja suavemente mientras carga
+      const simulatedAlt = Math.max(1, Math.round(120 / (1 + captureElapsed * 2.2)));
+      hud.setTelemetry(`
+        <span class="game-hud__title">Target: ${capturingBody.label} &middot; Orbital Descent</span>
+        <span class="hud-ok">${capturingBody.label} Approach Altitude ${simulatedAlt} km</span><br>
+        Descent Speed ${velocidadEntrada.toFixed(0)} km/s &middot; Locking landing zone&hellip;
+      `);
 
       hud.setStatus(`
         <span class="hud-warning"><b>${capturingBody.captureStatusTitle}</b></span><br>
         ${capturingBody.captureStatusBody}
       `);
 
-      const effectiveTransition =
-        (capturingBody.transitionRadius ?? capturingBody.radius) *
-        (capturingBody.currentScale ?? 1);
-      const centerDist = nave.position.distanceTo(capturingBody.posVec);
-      if (centerDist < effectiveTransition && !redirigiendo) {
+      // Iniciar la carga de la página de aterrizaje manteniendo la animación viva mientras responde el navegador
+      if (captureElapsed > 0.35 && !redirigiendo) {
         redirigiendo = true;
-        flashEntrada.style.opacity = '1';
-        setTimeout(() => {
-          window.location.href = withBase(capturingBody.nextRoute);
-        }, 500);
+        flashEntrada.style.opacity = '0.32';
+        window.location.href = withBase(capturingBody.nextRoute);
       }
     }
 
@@ -1127,7 +1179,6 @@ export function launchTransitMission(config) {
     if (estado === 'volando' || estado === 'acelerando_destino') {
       nave.updateMatrixWorld();
 
-      // Desplazamiento dinámico según velocidad y giro para sensación de peso
       const speedNorm = THREE.MathUtils.clamp(rapidezActual / VELOCIDAD_MAXIMA, 0, 1.2);
       idealCamPos
         .copy(camPreset.offset)
@@ -1143,14 +1194,20 @@ export function launchTransitMission(config) {
       const posSmoothing = 1 - Math.exp(-11 * dt);
       camara.position.lerp(idealCamPos, posSmoothing);
 
-      // Punto de enfoque adelantado (Look-Ahead) frente a la proa de la nave
-      idealLookAt
-        .set(
-          -velocidadAngular.y * 2.8,
-          0.65 - velocidadAngular.x * 2.2,
-          -camPreset.lookAhead
-        )
-        .applyMatrix4(nave.matrixWorld);
+      if (estado === 'acelerando_destino' && capturingBody) {
+        // Enfocarse directamente hacia el horizonte de la Luna/Marte mientras nos acercamos
+        idealLookAt.copy(capturingBody.posVec);
+        camara.position.x += (Math.random() - 0.5) * 0.28;
+        camara.position.y += (Math.random() - 0.5) * 0.28;
+      } else {
+        idealLookAt
+          .set(
+            -velocidadAngular.y * 2.8,
+            0.65 - velocidadAngular.x * 2.2,
+            -camPreset.lookAhead
+          )
+          .applyMatrix4(nave.matrixWorld);
+      }
 
       const lookSmoothing = 1 - Math.exp(-15 * dt);
       camFocusPoint.lerp(idealLookAt, lookSmoothing);
@@ -1160,15 +1217,11 @@ export function launchTransitMission(config) {
         camara.fov = THREE.MathUtils.lerp(camara.fov, targetFov, 1 - Math.exp(-6 * dt));
         camara.updateProjectionMatrix();
 
-        // Ligera inclinación del horizonte de la cámara acorde al giro
         upVector
           .set(-velocidadAngular.y * 0.12, 1, 0)
           .normalize()
           .applyQuaternion(nave.quaternion);
         camara.up.lerp(upVector, 1 - Math.exp(-8 * dt));
-      } else if (estado === 'acelerando_destino') {
-        camara.position.x += (Math.random() - 0.5) * 0.55;
-        camara.position.y += (Math.random() - 0.5) * 0.55;
       }
 
       camara.lookAt(camFocusPoint);
