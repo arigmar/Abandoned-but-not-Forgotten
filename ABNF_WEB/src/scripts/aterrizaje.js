@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-// ---------- 0. Contenedor a Pantalla Completa ----------
 const contenedor = document.getElementById('juego');
 Object.assign(document.body.style, {
   margin: '0',
@@ -25,12 +24,11 @@ contenedor.setAttribute('tabindex', '0');
 contenedor.focus();
 contenedor.addEventListener('click', () => contenedor.focus());
 
-// ---------- 1. Escena, cámara y renderer ----------
 const escena = new THREE.Scene();
 escena.background = new THREE.Color(0xc8643b);
 escena.fog = new THREE.FogExp2(0xc8643b, 0.0085);
 
-const camara = new THREE.PerspectiveCamera(60, ancho() / alto(), 0.1, 2000);
+const camara = new THREE.PerspectiveCamera(60, ancho() / alto(), 0.1, 3000);
 camara.position.set(0, 8, 22);
 camara.lookAt(0, 6, 0);
 
@@ -41,21 +39,92 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 contenedor.appendChild(renderer.domElement);
 
-// ---------- 2. Luces ----------
 escena.add(new THREE.HemisphereLight(0xffb88c, 0x5c2410, 1.35));
 const sol = new THREE.DirectionalLight(0xfff0dd, 2.5);
 sol.position.set(18, 35, 22);
 sol.castShadow = true;
 escena.add(sol);
 
-// ---------- 3. Cargadores GLTF + Draco ----------
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
 
 const cargador = new GLTFLoader();
 cargador.setDRACOLoader(dracoLoader);
 
-// Textura procedural marciana infinita para el horizonte
+const grupoTierraLejana = new THREE.Group();
+grupoTierraLejana.position.set(-140, 110, -650);
+escena.add(grupoTierraLejana);
+
+const tierraRespaldo = new THREE.Mesh(
+  new THREE.SphereGeometry(5.5, 24, 24),
+  new THREE.MeshBasicMaterial({ color: 0x66b2ff, fog: false })
+);
+grupoTierraLejana.add(tierraRespaldo);
+
+const brilloTierra = new THREE.Mesh(
+  new THREE.SphereGeometry(7.2, 24, 24),
+  new THREE.MeshBasicMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0.25,
+    side: THREE.BackSide,
+    fog: false
+  })
+);
+grupoTierraLejana.add(brilloTierra);
+
+cargador.load(
+  '/assets/games/earth__terra_-_downloadable_model.glb',
+  (gltf) => {
+    grupoTierraLejana.remove(tierraRespaldo);
+    const modeloTierra = gltf.scene;
+
+    const caja = new THREE.Box3();
+    modeloTierra.traverse((hijo) => {
+      if (hijo.isMesh) {
+        const mats = Array.isArray(hijo.material) ? hijo.material : [hijo.material];
+        mats.forEach((mat) => {
+          mat.side = THREE.DoubleSide;
+          mat.fog = false;
+          if (mat.metalness !== undefined) {
+            mat.metalness = 0.0;
+            mat.roughness = 0.85;
+          }
+          if (mat.map) {
+            mat.map.colorSpace = THREE.SRGBColorSpace;
+            mat.map.needsUpdate = true;
+          }
+          if (!mat.map) {
+            hijo.visible = false;
+          }
+          mat.needsUpdate = true;
+        });
+
+        const nombre = (hijo.name + ' ' + (hijo.parent?.name || '')).toLowerCase();
+        if (nombre.includes('cloud') || nombre.includes('atmos') || nombre.includes('nube') || nombre.includes('outer')) {
+          hijo.visible = false;
+        }
+
+        if (hijo.visible) {
+          caja.expandByObject(hijo);
+        }
+      }
+    });
+
+    const tamano = caja.getSize(new THREE.Vector3());
+    const maxDim = Math.max(tamano.x, tamano.y, tamano.z);
+    const escala = maxDim > 0 ? 11 / maxDim : 1;
+    modeloTierra.scale.setScalar(escala);
+
+    const centro = caja.getCenter(new THREE.Vector3()).multiplyScalar(escala);
+    modeloTierra.position.sub(centro);
+
+    grupoTierraLejana.add(modeloTierra);
+  },
+  undefined,
+  (err) => console.error('Error cargando Tierra lejana:', err)
+);
+
 function crearTexturaMarte() {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
@@ -83,7 +152,6 @@ function crearTexturaMarte() {
   return tex;
 }
 
-// Suelo base gigantesco para cubrir todo el campo de visión en cualquier monitor
 const sueloBase = new THREE.Mesh(
   new THREE.PlaneGeometry(2000, 2000),
   new THREE.MeshStandardMaterial({
@@ -97,7 +165,6 @@ sueloBase.position.y = -0.05;
 sueloBase.receiveShadow = true;
 escena.add(sueloBase);
 
-// Modelo 3D del escenario de Marte con el Rover Perseverance
 const grupoEscenario = new THREE.Group();
 escena.add(grupoEscenario);
 
@@ -130,7 +197,6 @@ cargador.load(
 
     const tamano = caja.getSize(new THREE.Vector3());
     const anchoActual = Math.max(tamano.x, tamano.z);
-    // Escalado amplio para cubrir todo el ancho de la pantalla ultrawide / 4K
     const escala = anchoActual > 0 ? 95 / anchoActual : 1;
     modeloSuelo.scale.setScalar(escala);
 
@@ -147,7 +213,6 @@ cargador.load(
   (err) => console.error('Error cargando perseverance_rover_on_mars.glb:', err)
 );
 
-// Plataforma de aterrizaje con luces guía
 const MITAD_PLATAFORMA = 1.6;
 const plataforma = new THREE.Group();
 plataforma.position.y = 0.08;
@@ -171,7 +236,6 @@ const bordeLuminoso = new THREE.Mesh(
 bordeLuminoso.position.y = 0.02;
 plataforma.add(bordeLuminoso);
 
-// ---------- 4. Nave y llama ----------
 const nave = new THREE.Group();
 escena.add(nave);
 
@@ -235,18 +299,17 @@ llama.position.y = -0.95;
 llama.visible = false;
 nave.add(llama);
 
-// ---------- 5. Física Realista de Marte ----------
-const GRAVEDAD = -3.72;          // Gravedad real de Marte en m/s² (38% de la Tierra)
-const EMPUJE = 9.6;              // Empuje calibrado (~2.5x la gravedad marciana)
-const EMPUJE_LATERAL = 3.2;      // Propulsores de maniobra lateral
+const GRAVEDAD = -3.72;
+const EMPUJE = 9.6;
+const EMPUJE_LATERAL = 3.2;
 const MITAD_ALTURA = 0.6;
 const TECHO = 25;
 const LIMITE_X = 22;
-const VEL_SEGURA = 2.5;          // Impacto vertical máximo seguro (m/s)
-const VEL_LATERAL_SEGURA = 2.2;  // Impacto horizontal máximo seguro (m/s)
+const VEL_SEGURA = 2.5;
+const VEL_LATERAL_SEGURA = 2.2;
 const COMBUSTIBLE_MAX = 100;
-const GASTO = 22;                // Consumo por segundo del motor principal
-const GASTO_LATERAL = 9;         // Consumo por segundo de maniobra lateral
+const GASTO = 22;
+const GASTO_LATERAL = 9;
 
 let posX, posY, velX, velY, combustible, estado, velImpacto, motivo = '';
 
@@ -268,7 +331,6 @@ function reiniciar() {
 }
 reiniciar();
 
-// ---------- 6. Controles ----------
 const teclas = {};
 const TECLAS_JUEGO = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
 window.addEventListener('keydown', (e) => {
@@ -282,13 +344,14 @@ window.addEventListener('keyup', (e) => {
   teclas[e.key.toLowerCase()] = false;
 });
 
-// ---------- 7. Ciclo del juego ----------
 const hud = document.getElementById('hud');
 const reloj = new THREE.Clock();
 
 function actualizar() {
   const dt = Math.min(reloj.getDelta(), 0.05);
   let motorPrendido = false;
+
+  grupoTierraLejana.rotation.y += 0.08 * dt;
 
   if (estado === 'volando') {
     let accY = GRAVEDAD;
@@ -309,7 +372,6 @@ function actualizar() {
     }
     combustible = Math.max(0, combustible);
 
-    // Resistencia atmosférica tenue de Marte (1% de la Tierra)
     velX = (velX + accX * dt) * (1 - 0.04 * dt);
     velY = (velY + accY * dt) * (1 - 0.02 * dt);
     posX += velX * dt;
@@ -392,7 +454,6 @@ function actualizar() {
 }
 actualizar();
 
-// ---------- 8. Ajustar a pantalla completa ----------
 window.addEventListener('resize', () => {
   camara.aspect = ancho() / alto();
   camara.updateProjectionMatrix();
