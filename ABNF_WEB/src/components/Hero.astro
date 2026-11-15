@@ -171,7 +171,7 @@ const radarNodesJson = JSON.stringify(radarNodes);
       </div>
 
       <!-- Primary & Secondary CTAs -->
-      <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="mt-7 flex flex-col flex-wrap gap-3 sm:flex-row sm:items-center">
         <a
           href="#expedition"
           class="inline-flex items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-5 py-3 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
@@ -187,6 +187,15 @@ const radarNodesJson = JSON.stringify(radarNodes);
           <span>05 // Inspect Surface Archive</span>
           <span aria-hidden="true">-&gt;</span>
         </a>
+
+        <button
+          type="button"
+          id="hero-replay-intro-btn"
+          class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-border-strong)] bg-[color:rgba(19,27,46,0.75)] px-5 py-3 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+        >
+          <span aria-hidden="true">&#9654;</span>
+          <span>Replay Intro Video</span>
+        </button>
       </div>
     </div>
   </div>
@@ -234,6 +243,11 @@ const radarNodesJson = JSON.stringify(radarNodes);
   const clockEl = document.getElementById('hero-silence-clock');
   const srEl = document.getElementById('hero-silence-sr');
   const captionEl = document.getElementById('hero-radar-caption');
+  const replayIntroBtn = document.getElementById('hero-replay-intro-btn');
+
+  replayIntroBtn?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('abnf:open-intro'));
+  });
 
   if (payloadEl) {
     const parsed = JSON.parse(payloadEl.textContent || '{}') as {
