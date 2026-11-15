@@ -37,11 +37,21 @@ Since the 1960s, NASA has left hardware across the solar system. School-age spac
 
 ## Screenshots
 
-<!-- Add screenshots to docs/screenshots/ and uncomment the lines below -->
-[Home](docs/screenshots/home.png) 
-[Surface Archive](docs/screenshots/archive.png)
-[Flight to Mars](docs/screenshots/flight.png)
-[Descent](docs/screenshots/landing.png)
+**Signal Detection**
+![Signal Detection](docs/screenshots/home.png)
+
+**Surface Expedition**
+![Surface Expedition](docs/screenshots/expedition.png)
+
+**Field Simulator: Postcards from Silence**
+![Field Simulator](docs/screenshots/simulator.png)
+
+**Flight to Mars & Descent**
+![Flight to Mars](docs/screenshots/flight.png)
+<!-- ![Descent](docs/screenshots/landing.png) -->
+
+**Surface Archive**
+![Surface Archive](docs/screenshots/archive.png)
 
 ## What's Inside
 
@@ -49,12 +59,12 @@ The site is a single page organized in six sections:
 
 | # | Section | Status | Description |
 |---|---|---|---|
-| 01 | **Signal Detection** | Active | Opening section of the archive. |
-| 02 | **Surface Expedition** | Active | 3D exterior reconnaissance of the cataloged spacecraft, built with Three.js. |
+| 01 | **Signal Detection** | Active | Live silence clock with the combined time since last contact of the six cataloged explorers. |
+| 02 | **Surface Expedition** | Active | Fly across deep space, descend to Mars or the Moon, drive a survey rover to a dormant NASA monument and inspect its exterior. Built with Three.js. |
 | 03 | **Field Simulator** | Active | *Postcards from Silence*, a TurboWarp game, plus the **Flight to Mars & Descent** mission (see below). |
 | 04 | **Mission Context** | In progress | Guided visual sequence on how missions become monuments. |
 | 05 | **Surface Archive** | Active | Dashboard with key figures, filters, a surface atlas, a timeline and a museum plaque for every spacecraft. |
-| 06 | **Sources & Credits** | In progress | References for every record. |
+| 06 | **Sources & Credits** | In progress | Verification status and official NASA sources logged for every spacecraft. |
 
 ### Cataloged Spacecraft
 
@@ -164,7 +174,7 @@ All models are from [Sketchfab](https://sketchfab.com/) under the [Creative Comm
 | `mars.glb` | [Mars](https://sketchfab.com/3d-models/mars-5fc8b7168b044527a05ed3903c998b65) | [AirStudios](https://sketchfab.com/sebbe613) | Flight |
 | `perseverance_rover_on_mars.glb` | [Perseverance rover on Mars](https://sketchfab.com/3d-models/perseverance-rover-on-mars-fc11b1c7457b4d07ad7a0825911e2847) | [Ignazio Pillitteri](https://sketchfab.com/gnaz) | Descent |
 | `spaceship.glb` | [SpaceShip](https://sketchfab.com/3d-models/spaceship-6164a883f57f4f13938c3c5999bc0e1f) | [JazOone](https://sketchfab.com/JazOone) | Flight, Descent |
-| *sun.glb* | [Sun](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645) | [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski) | *Flight* |
+| *[FILE NAME]* | [Sun](https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645) | [SebastianSosnowski](https://sketchfab.com/SebastianSosnowski) | *[SCENE]* |
 
 ## License
 
