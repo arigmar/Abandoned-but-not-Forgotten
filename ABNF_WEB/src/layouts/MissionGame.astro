@@ -13,6 +13,8 @@ interface Props {
   description: string;
   /** In-museum anchor used by the "Back to museum" link. */
   returnAnchor?: string;
+  /** Top-bar quick controls preset. */
+  controlsMode?: 'transit' | 'landing';
 }
 
 const {
@@ -20,6 +22,7 @@ const {
   code,
   description,
   returnAnchor = '#expedition',
+  controlsMode,
 } = Astro.props;
 
 const backHref = withBase(`/${returnAnchor}`);
@@ -55,6 +58,40 @@ const backHref = withBase(`/${returnAnchor}`);
         </div>
 
         <div class="mission-bar__actions">
+          {
+            controlsMode === 'transit' && (
+              <div class="flex items-center gap-1" role="group" aria-label="Switch destination target">
+                <button
+                  type="button"
+                  class="mission-bar__pill"
+                  data-target-btn="moon"
+                  aria-pressed="false"
+                >
+                  Moon [1]
+                </button>
+                <button
+                  type="button"
+                  class="mission-bar__pill"
+                  data-target-btn="mars"
+                  aria-pressed="false"
+                >
+                  Mars [2]
+                </button>
+              </div>
+            )
+          }
+          {
+            controlsMode === 'landing' && (
+              <>
+                <button type="button" class="mission-bar__explore" id="mission-explore-surface">
+                  Explore Surface [E]
+                </button>
+                <button type="button" class="mission-bar__orbit" id="mission-launch-orbit">
+                  Launch to Orbit [L]
+                </button>
+              </>
+            )
+          }
           <button type="button" class="mission-bar__restart" id="mission-restart">
             Restart
           </button>
@@ -84,6 +121,9 @@ const backHref = withBase(`/${returnAnchor}`);
     <script>
       const shell = document.getElementById('mission-shell');
       const viewport = document.getElementById('juego');
+      const targetButtons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>('[data-target-btn]')
+      );
 
       // Compact chrome when running inside the museum page.
       if (shell && window.self !== window.top) {
@@ -93,6 +133,34 @@ const backHref = withBase(`/${returnAnchor}`);
       document.getElementById('mission-restart')?.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('mission:restart'));
         viewport?.focus();
+      });
+
+      document.getElementById('mission-launch-orbit')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('mission:launch-orbit'));
+        viewport?.focus();
+      });
+
+      document.getElementById('mission-explore-surface')?.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('mission:explore-surface'));
+        viewport?.focus();
+      });
+
+      targetButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.targetBtn;
+          if (!target) return;
+          window.dispatchEvent(
+            new CustomEvent('mission:select-target', { detail: { target } })
+          );
+          viewport?.focus();
+        });
+      });
+
+      window.addEventListener('mission:target-changed', (e) => {
+        const active = (e as CustomEvent<{ target?: string }>).detail?.target;
+        targetButtons.forEach((btn) => {
+          btn.setAttribute('aria-pressed', btn.dataset.targetBtn === active ? 'true' : 'false');
+        });
       });
     </script>
   </body>

@@ -5,7 +5,9 @@ import MissionGame from '../layouts/MissionGame.astro';
 <MissionGame
   title="Mars Descent"
   code="Flight mission / Landing"
-  description="Land on Mars under real Martian gravity (3.72 m/s²). Manage fuel and lateral speed to touch down softly on the landing pad."
+  returnAnchor="#expedition"
+  controlsMode="landing"
+  description="Land on Mars under real Martian gravity (3.72 m/s²), or launch back to orbit to fly toward the Moon."
 >
   <script>
     import '../scripts/aterrizaje.js';

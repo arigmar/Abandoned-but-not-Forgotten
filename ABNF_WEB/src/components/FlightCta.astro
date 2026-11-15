@@ -1,0 +1,74 @@
+---
+import { withBase } from '../lib/base-path';
+
+const flightHref = withBase('/vuelo');
+
+const stages = [
+  {
+    code: 'STAGE 01',
+    label: 'Transit',
+    detail: 'Leave Earth, steer past the Moon and reach Mars.',
+  },
+  {
+    code: 'STAGE 02',
+    label: 'Descent',
+    detail: 'Powered landing under Martian gravity: 3.72 m/s².',
+  },
+];
+---
+
+<section
+  id="flight"
+  class="mt-6 space-y-5 border border-[var(--color-border-strong)] bg-[var(--color-void)] p-4 sm:p-6"
+  aria-labelledby="flight-cta-heading"
+>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="max-w-2xl space-y-2">
+      <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+        Flight mission · Three.js · Two-stage expedition
+      </p>
+      <h3
+        id="flight-cta-heading"
+        class="font-serif-display text-3xl tracking-tight text-[var(--color-text-primary)]"
+      >
+        Flight to Mars &amp; Descent
+      </h3>
+      <p class="text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
+        Pilot the historian drone from Earth to the red planet, then bring it down onto the
+        landing pad. Reach Mars to unlock the descent sequence; overshoot the Moon or fall
+        back to Earth and the mission is aborted.
+      </p>
+    </div>
+
+    <a
+      href={flightHref}
+      class="inline-flex shrink-0 items-center gap-2 border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-4 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase transition-colors hover:border-[var(--color-turquoise)]"
+    >
+      Launch flight mission
+      <span aria-hidden="true">&rarr;</span>
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    {
+      stages.map((stage) => (
+        <div class="border border-[var(--color-border)] bg-[var(--color-slate)] p-3">
+          <p class="font-mono-telemetry text-[10px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+            {stage.code}
+          </p>
+          <p class="mt-0.5 font-mono-telemetry text-xs font-bold tracking-[0.1em] text-[var(--color-text-primary)] uppercase">
+            {stage.label}
+          </p>
+          <p class="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+            {stage.detail}
+          </p>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-3 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
+    <span>[W / Space] Thrust · [A / D] Turn · [Arrows] Pitch · [R] Restart</span>
+    <span>Full viewport · "Back to museum" returns here</span>
+  </div>
+</section>

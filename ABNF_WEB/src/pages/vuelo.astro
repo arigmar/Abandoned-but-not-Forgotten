@@ -3,9 +3,11 @@ import MissionGame from '../layouts/MissionGame.astro';
 ---
 
 <MissionGame
-  title="Flight to Mars"
+  title="Orbital Flight — Moon & Mars"
   code="Flight mission / Transit"
-  description="Pilot a small historian drone from Earth to Mars. Thrust, steer and reach the red planet to begin the descent sequence."
+  returnAnchor="#expedition"
+  controlsMode="transit"
+  description="Pilot the historian drone in open space between Earth, the Moon, and Mars. Reach either world to begin its powered descent, or switch targets mid-flight."
 >
   <script>
     import '../scripts/vuelo.js';

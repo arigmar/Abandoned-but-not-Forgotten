@@ -1,5 +1,5 @@
 /**
- * Shared runtime helpers for the Three.js mission pages (/vuelo, /aterrizaje).
+ * Shared runtime helpers for the Three.js mission pages (/vuelo, /aterrizaje, /vuelo-luna, /aterrizaje-luna).
  *
  * They assume the markup provided by `src/layouts/MissionGame.astro`.
  * Plain JavaScript on purpose: the mission scripts are plain JS too.
@@ -39,6 +39,29 @@ export function createHud() {
 /** Wire the shell's Restart button (and any `mission:restart` dispatcher). */
 export function onMissionRestart(restart) {
   window.addEventListener('mission:restart', () => restart());
+}
+
+/** Wire the shell's Launch-to-Orbit action (`mission:launch-orbit`). */
+export function onLaunchOrbit(launch) {
+  window.addEventListener('mission:launch-orbit', () => launch());
+}
+
+/** Wire the shell's Explore-Surface action (`mission:explore-surface`). */
+export function onExploreSurface(explore) {
+  window.addEventListener('mission:explore-surface', () => explore());
+}
+
+/** Wire destination switch events from the top bar (`mission:select-target`). */
+export function onSelectTarget(select) {
+  window.addEventListener('mission:select-target', (e) => {
+    const target = e.detail?.target;
+    if (target) select(target);
+  });
+}
+
+/** Notify shell chrome which celestial target is currently highlighted. */
+export function emitTargetChanged(target) {
+  window.dispatchEvent(new CustomEvent('mission:target-changed', { detail: { target } }));
 }
 
 /**
