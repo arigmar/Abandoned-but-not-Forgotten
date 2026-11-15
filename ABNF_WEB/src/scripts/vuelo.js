@@ -20,17 +20,92 @@ contenedor.addEventListener('click', () => contenedor.focus());
 const escena = new THREE.Scene();
 escena.background = new THREE.Color(0x010106);
 
-const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 4000);
+// Plano lejano ampliado a 12000 para soportar distancias interplanetarias realistas
+const camara = new THREE.PerspectiveCamera(60, 1, 0.1, 12000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 contenedor.appendChild(renderer.domElement);
 observeViewportSize(renderer, camara, contenedor);
 
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+
+const cargador = new GLTFLoader();
+cargador.setDRACOLoader(dracoLoader);
+
+// --- SOL LEJANO A ESCALA ASTRONÓMICA ---
+const POS_SOL = new THREE.Vector3(2200, 950, -4200);
+const RADIO_SOL = 420;
+const DISTANCIA_LIMITE_SOL = 950; // Zona de radiación térmica infranqueable
+
+const grupoSol = new THREE.Group();
+grupoSol.position.copy(POS_SOL);
+escena.add(grupoSol);
+
+const temporalSol = new THREE.Mesh(
+  new THREE.SphereGeometry(RADIO_SOL, 32, 32),
+  new THREE.MeshBasicMaterial({ color: 0xffaa00 })
+);
+grupoSol.add(temporalSol);
+
+const haloSol = new THREE.Mesh(
+  new THREE.SphereGeometry(RADIO_SOL * 1.25, 32, 32),
+  new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.25,
+    side: THREE.BackSide
+  })
+);
+grupoSol.add(haloSol);
+
+cargador.load(
+  withBase('/assets/games/sun.glb'),
+  (gltf) => {
+    grupoSol.remove(temporalSol);
+    const modeloSol = gltf.scene;
+
+    const caja = new THREE.Box3();
+    modeloSol.traverse((hijo) => {
+      if (hijo.isMesh) {
+        hijo.material.side = THREE.DoubleSide;
+
+        if (hijo.material.metalness !== undefined) {
+          hijo.material.metalness = 0.0;
+          hijo.material.roughness = 1.0;
+        }
+
+        if (hijo.material.map) {
+          hijo.material.emissiveMap = hijo.material.map;
+          hijo.material.emissive = new THREE.Color(0xffffff);
+          hijo.material.emissiveIntensity = 1.2;
+        }
+
+        hijo.material.needsUpdate = true;
+        caja.expandByObject(hijo);
+      }
+    });
+
+    const tamano = caja.getSize(new THREE.Vector3());
+    const maxDim = Math.max(tamano.x, tamano.y, tamano.z);
+    const escala = maxDim > 0 ? (RADIO_SOL * 2) / maxDim : 1;
+    modeloSol.scale.setScalar(escala);
+
+    const centro = caja.getCenter(new THREE.Vector3()).multiplyScalar(escala);
+    modeloSol.position.sub(centro);
+
+    grupoSol.add(modeloSol);
+  },
+  undefined,
+  (err) => console.error('Failed to load sun.glb:', err)
+);
+
+// Iluminación para mantener visibles los colores de Tierra, Luna y Marte
 escena.add(new THREE.AmbientLight(0xffffff, 1.4));
-const sol = new THREE.DirectionalLight(0xfff5e6, 3.0);
-sol.position.set(300, 150, 250);
-escena.add(sol);
+const solLuz = new THREE.DirectionalLight(0xfff5e6, 3.0);
+solLuz.position.set(300, 150, 250);
+escena.add(solLuz);
 
 function crearCapaEstrellas(cantidad, rango, tamano, colorHex, opacidad = 1) {
   const geo = new THREE.BufferGeometry();
@@ -49,16 +124,56 @@ function crearCapaEstrellas(cantidad, rango, tamano, colorHex, opacidad = 1) {
   return new THREE.Points(geo, mat);
 }
 
-const estrellasLejanas = crearCapaEstrellas(4000, 3500, 1.2, 0xffffff, 0.8);
-const estrellasAzules  = crearCapaEstrellas(1200, 2500, 2.2, 0xaaccff, 0.9);
-const estrellasCalidas = crearCapaEstrellas(600,  2000, 2.8, 0xffddaa, 1.0);
+const estrellasLejanas = crearCapaEstrellas(5000, 10000, 2.2, 0xffffff, 0.8);
+const estrellasAzules  = crearCapaEstrellas(1600, 8000,  3.5, 0xaaccff, 0.9);
+const estrellasCalidas = crearCapaEstrellas(800,  6500,  4.2, 0xffddaa, 1.0);
 escena.add(estrellasLejanas, estrellasAzules, estrellasCalidas);
 
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+// --- PUNTOS DE PLANETAS LEJANOS ---
+function crearPlanetasLejanos(cantidad, radioMin, radioMax) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(cantidad * 3);
+  const colores = new Float32Array(cantidad * 3);
 
-const cargador = new GLTFLoader();
-cargador.setDRACOLoader(dracoLoader);
+  const paletaPlanetas = [
+    new THREE.Color(0x5599ff),
+    new THREE.Color(0xff8855),
+    new THREE.Color(0xeedd99),
+    new THREE.Color(0x77ddaa),
+    new THREE.Color(0xd488ff),
+  ];
+
+  for (let i = 0; i < cantidad; i++) {
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = radioMin + Math.random() * (radioMax - radioMin);
+
+    pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i * 3 + 2] = r * Math.cos(phi);
+
+    const color = paletaPlanetas[Math.floor(Math.random() * paletaPlanetas.length)];
+    colores[i * 3]     = color.r;
+    colores[i * 3 + 1] = color.g;
+    colores[i * 3 + 2] = color.b;
+  }
+
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colores, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: 11,
+    vertexColors: true,
+    sizeAttenuation: true
+  });
+
+  return new THREE.Points(geo, mat);
+}
+
+const planetasLejanos = crearPlanetasLejanos(220, 4800, 9000);
+escena.add(planetasLejanos);
 
 function crearPlaneta({ posicion, radio, colorRespaldo, urlGLB, atmosferaColor = null }) {
   const grupo = new THREE.Group();
@@ -129,7 +244,9 @@ function crearPlaneta({ posicion, radio, colorRespaldo, urlGLB, atmosferaColor =
   return grupo;
 }
 
-const POS_TIERRA = new THREE.Vector3(-40, -35, 130);
+// --- CUERPOS CELESTES CON PROPORCIONES Y DISTANCIAS REALISTAS ---
+// 1. Tierra: punto de partida cercano (órbita terrestre)
+const POS_TIERRA = new THREE.Vector3(-45, -30, 140);
 const RADIO_TIERRA = 55;
 const tierra = crearPlaneta({
   posicion: POS_TIERRA,
@@ -139,8 +256,9 @@ const tierra = crearPlaneta({
   urlGLB: '/assets/games/earth.glb'
 });
 
-const POS_LUNA = new THREE.Vector3(-180, 30, -350);
-const RADIO_LUNA = 25;
+// 2. Luna: ~1/4 del tamaño de la Tierra y orbitando en su vecindad
+const POS_LUNA = new THREE.Vector3(-240, 45, -280);
+const RADIO_LUNA = 15;
 const luna = crearPlaneta({
   posicion: POS_LUNA,
   radio: RADIO_LUNA,
@@ -148,8 +266,9 @@ const luna = crearPlaneta({
   urlGLB: '/assets/games/Lune.glb'
 });
 
-const POS_MARTE = new THREE.Vector3(160, -20, -500);
-const RADIO_MARTE = 45;
+// 3. Marte: ~53% del tamaño de la Tierra y a distancia interplanetaria
+const POS_MARTE = new THREE.Vector3(380, -35, -1350);
+const RADIO_MARTE = 30;
 const marte = crearPlaneta({
   posicion: POS_MARTE,
   radio: RADIO_MARTE,
@@ -169,12 +288,24 @@ const cuerpoTemporal = new THREE.Mesh(
 );
 modeloVisualNave.add(cuerpoTemporal);
 
-const fuego = new THREE.Mesh(
-  new THREE.ConeGeometry(0.55, 2.2, 8).rotateX(Math.PI / 2),
-  new THREE.MeshBasicMaterial({ color: 0x00ffff })
+// --- PROPULSORES NARANJAS (SOLO LOS 2 LATERALES) ---
+const grupoPropulsores = new THREE.Group();
+grupoPropulsores.position.z = 2.2;
+modeloVisualNave.add(grupoPropulsores);
+
+const fuegoIzq = new THREE.Mesh(
+  new THREE.ConeGeometry(0.24, 1.1, 8).rotateX(Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xff7711 })
 );
-fuego.position.z = 2.4;
-modeloVisualNave.add(fuego);
+fuegoIzq.position.set(-0.72, 0, 0.55);
+grupoPropulsores.add(fuegoIzq);
+
+const fuegoDer = new THREE.Mesh(
+  new THREE.ConeGeometry(0.24, 1.1, 8).rotateX(Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0xff7711 })
+);
+fuegoDer.position.set(0.72, 0, 0.55);
+grupoPropulsores.add(fuegoDer);
 
 cargador.load(
   withBase('/assets/games/spaceship.glb'),
@@ -269,30 +400,33 @@ const gate = createRenderGate(contenedor);
 function actualizar() {
   requestAnimationFrame(actualizar);
 
-  // Skip simulation and rendering while off screen or in a hidden tab.
-  // Draining the clock keeps dt small when the mission becomes visible again.
   const dt = Math.min(reloj.getDelta(), 0.05);
   if (!gate.active) return;
 
   tierra.rotation.y += 0.06 * dt;
   luna.rotation.y   += 0.10 * dt;
   marte.rotation.y  += 0.12 * dt;
+  grupoSol.rotation.y += 0.02 * dt;
+
+  const pulsoSol = 1 + Math.sin(reloj.elapsedTime * 2) * 0.03;
+  haloSol.scale.setScalar(pulsoSol);
 
   if (estado === 'volando') {
     const acelerando = teclas['KeyW'] || teclas['w'] || teclas['Space'];
     const frenando   = teclas['KeyS'] || teclas['s'];
 
     if (acelerando) {
-      velocidad = Math.min(velocidad + 75 * dt, 150);
-      fuego.visible = true;
-      fuego.scale.z = 0.8 + Math.random() * 0.6;
+      velocidad = Math.min(velocidad + 140 * dt, 320);
+      grupoPropulsores.visible = true;
+      fuegoIzq.scale.z = 0.8 + Math.random() * 0.6;
+      fuegoDer.scale.z = 0.8 + Math.random() * 0.6;
     } else if (frenando) {
-      velocidad = Math.max(velocidad - 75 * dt, -35);
-      fuego.visible = false;
+      velocidad = Math.max(velocidad - 180 * dt, 0);
+      grupoPropulsores.visible = false;
     } else {
       velocidad *= 0.985;
-      if (Math.abs(velocidad) < 0.1) velocidad = 0;
-      fuego.visible = false;
+      if (velocidad < 0.1) velocidad = 0;
+      grupoPropulsores.visible = false;
     }
 
     const velGiro = 1.8;
@@ -319,20 +453,28 @@ function actualizar() {
     const distLuna   = nave.position.distanceTo(POS_LUNA)   - RADIO_LUNA;
     const distMarte  = nave.position.distanceTo(POS_MARTE)  - RADIO_MARTE;
     const distTierra = nave.position.distanceTo(POS_TIERRA) - RADIO_TIERRA;
+    const distSol    = nave.position.distanceTo(POS_SOL)    - RADIO_SOL;
 
-    if (distLuna < 15) {
+    if (distSol < DISTANCIA_LIMITE_SOL) {
+      estado = 'fallo_sol';
+      velocidad = 0;
+      grupoPropulsores.visible = false;
+      flashEntrada.style.opacity = '0.45';
+    }
+
+    if (distLuna < 12) {
       estado = 'fallo_luna';
       velocidad = 0;
-      fuego.visible = false;
+      grupoPropulsores.visible = false;
     }
 
     if (distTierra < 15) {
       estado = 'fallo_tierra';
       velocidad = 0;
-      fuego.visible = false;
+      grupoPropulsores.visible = false;
     }
 
-    if (distMarte < 40) {
+    if (distMarte < 45) {
       estado = 'acelerando_marte';
       modeloVisualNave.rotation.z = 0;
       nave.lookAt(POS_MARTE);
@@ -346,6 +488,14 @@ function actualizar() {
       <span class="game-hud__controls">[W / Space] Thrust · [S] Brake · [A / D / &larr; &rarr;] Turn · [&uarr; &darr;] Pitch</span>
     `);
     hud.setStatus('');
+  }
+
+  else if (estado === 'fallo_sol') {
+    hud.setStatus(`
+      <span class="hud-danger"><b>CRITICAL HEAT WARNING</b></span><br>
+      Solar radiation exceeded hull limits — you cannot approach the Sun.<br>
+      Press <b>[ R ]</b> or hit <b>Restart</b> to launch again.
+    `);
   }
 
   else if (estado === 'fallo_luna') {
@@ -373,8 +523,9 @@ function actualizar() {
       camara.updateProjectionMatrix();
     }
 
-    fuego.visible = true;
-    fuego.scale.set(1.5, 1.5, 4 + Math.random() * 2);
+    grupoPropulsores.visible = true;
+    fuegoIzq.scale.set(1.3, 1.3, 3 + Math.random() * 1.5);
+    fuegoDer.scale.set(1.3, 1.3, 3 + Math.random() * 1.5);
 
     hud.setStatus(`
       <span class="hud-warning"><b>ENTERING MARS ORBIT</b></span><br>
@@ -385,7 +536,6 @@ function actualizar() {
       redirigiendo = true;
       flashEntrada.style.opacity = '1';
       setTimeout(() => {
-        // Base-aware and, when embedded, navigates inside the frame on purpose.
         window.location.href = withBase('/aterrizaje');
       }, 500);
     }
