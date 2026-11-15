@@ -29,14 +29,59 @@ const aspectClass = SITE.gameAspectRatio === '4:3' ? 'aspect-[4/3]' : 'aspect-vi
     >
       {
         hasGameBundle ? (
-          <iframe
-            id="field-simulator-iframe"
-            src={gameIframeSrc}
-            title={`${SITE.name} Field Simulator`}
-            class="h-full w-full border-0 bg-[var(--color-void)]"
-            loading="lazy"
-            allow="fullscreen; autoplay"
-          />
+          <>
+            <iframe
+              id="field-simulator-iframe"
+              data-src={gameIframeSrc}
+              title={`${SITE.name} Field Simulator`}
+              class="h-full w-full border-0 bg-[var(--color-void)]"
+              allow="fullscreen; autoplay"
+              hidden
+            />
+
+            <div
+              id="sim-standby-overlay"
+              class="flex h-full w-full flex-col justify-between bg-reticle-grid p-4 sm:p-6"
+            >
+              <!-- Top Telemetry Header -->
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
+                <div class="flex items-center gap-2 font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-turquoise)]">
+                  <span class="h-2 w-2 bg-[var(--color-turquoise)]" aria-hidden="true" />
+                  <span>SURFACE UPLINK · AUDIO &amp; VM STANDBY</span>
+                </div>
+                <span class="font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)]">
+                  CANVAS {SITE.gameAspectRatio} · TURBOWARP HTML
+                </span>
+              </div>
+
+              <!-- Center Launch Prompt -->
+              <div class="my-auto flex flex-col items-center justify-center py-4 text-center">
+                <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-amber)] uppercase">
+                  Field Simulator // Surface Uplink
+                </p>
+                <p class="mt-1.5 font-serif-display text-3xl text-[var(--color-text-primary)] sm:text-4xl">
+                  Postcards from Silence
+                </p>
+                <p class="mt-2 max-w-md text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
+                  Press launch to initialize the Scratch simulator and audio uplink. Nothing runs or plays sound until you start.
+                </p>
+                <button
+                  type="button"
+                  id="sim-launch-btn"
+                  class="mt-5 inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-5 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
+                >
+                  <span>Launch Field Simulator</span>
+                  <span aria-hidden="true">-&gt;</span>
+                </button>
+              </div>
+
+              <!-- Bottom Status Bar -->
+              <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-3 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)]">
+                <span>STATUS: READY TO INITIALIZE</span>
+                <span class="text-[var(--color-turquoise)]">AUDIO MUTED UNTIL LAUNCH</span>
+              </div>
+            </div>
+          </>
         ) : (
           <div class="flex h-full w-full flex-col justify-between bg-reticle-grid p-4 sm:p-6">
             <!-- Top Telemetry Header -->
@@ -211,8 +256,23 @@ const aspectClass = SITE.gameAspectRatio === '4:3' ? 'aspect-[4/3]' : 'aspect-vi
 
   const viewportFrame = document.getElementById('simulator-viewport-frame');
   const simulatorIframe = document.getElementById('field-simulator-iframe') as HTMLIFrameElement | null;
+  const standbyOverlay = document.getElementById('sim-standby-overlay');
+  const launchBtn = document.getElementById('sim-launch-btn') as HTMLButtonElement | null;
   const fullscreenBtn = document.getElementById('sim-fullscreen-btn') as HTMLButtonElement | null;
   const reloadBtn = document.getElementById('sim-reload-btn') as HTMLButtonElement | null;
+
+  const launchSimulator = () => {
+    if (!simulatorIframe) return;
+    const targetSrc = simulatorIframe.dataset.src || simulatorIframe.getAttribute('src');
+    if (!targetSrc) return;
+    simulatorIframe.setAttribute('src', targetSrc);
+    simulatorIframe.hidden = false;
+    if (standbyOverlay) standbyOverlay.hidden = true;
+    if (viewportFrame) viewportFrame.dataset.gameState = 'playing';
+    simulatorIframe.focus();
+  };
+
+  launchBtn?.addEventListener('click', launchSimulator);
 
   fullscreenBtn?.addEventListener('click', () => {
     const target = viewportFrame ?? simulatorIframe;
@@ -224,12 +284,5 @@ const aspectClass = SITE.gameAspectRatio === '4:3' ? 'aspect-[4/3]' : 'aspect-vi
     }
   });
 
-  reloadBtn?.addEventListener('click', () => {
-    if (!simulatorIframe) return;
-    const src = simulatorIframe.getAttribute('src');
-    if (src) {
-      simulatorIframe.setAttribute('src', src);
-      simulatorIframe.focus();
-    }
-  });
+  reloadBtn?.addEventListener('click', launchSimulator);
 </script>

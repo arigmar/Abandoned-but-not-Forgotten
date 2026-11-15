@@ -1,0 +1,167 @@
+---
+import { SITE } from '../config/site';
+import { withBase } from '../lib/base-path';
+
+const videoSrc = withBase(SITE.introVideoPath);
+---
+
+<div
+  id="intro-video-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Mission introduction video"
+  hidden
+  class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-void)]"
+>
+  <video
+    id="intro-video-player"
+    class="h-full w-full object-cover"
+    playsinline
+    preload="metadata"
+    src={videoSrc}
+  ></video>
+
+  <!-- Fallback message if video asset is missing or fails to load -->
+  <div
+    id="intro-video-fallback"
+    hidden
+    class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--color-void)] px-6 text-center"
+  >
+    <p class="font-mono-telemetry text-xs tracking-[0.16em] text-[var(--color-amber)] uppercase">
+      TELEMETRY VIDEO STREAM UNAVAILABLE
+    </p>
+    <p class="max-w-md text-sm text-[var(--color-text-secondary)]">
+      Place the intro video file at <code class="font-mono-telemetry text-[var(--color-text-primary)]">public{SITE.introVideoPath}</code> to enable playback.
+    </p>
+  </div>
+
+  <!-- Top-left mission transmission badge -->
+  <div class="pointer-events-none absolute top-4 left-4 z-10 inline-flex items-center gap-2 border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.82)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-text-secondary)] uppercase backdrop-blur-sm sm:top-6 sm:left-6">
+    <span class="h-2 w-2 bg-[var(--color-turquoise)]" aria-hidden="true"></span>
+    <span>INTRO TRANSMISSION // {SITE.name}</span>
+  </div>
+
+  <!-- Overlay controls: Audio toggle + Skip button -->
+  <div class="absolute right-4 bottom-5 z-10 flex items-center gap-3 sm:right-6 sm:bottom-6">
+    <button
+      type="button"
+      id="intro-video-mute-btn"
+      class="cursor-pointer border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.85)] px-3.5 py-2.5 font-mono-telemetry text-[11px] font-medium tracking-[0.14em] text-[var(--color-text-secondary)] uppercase backdrop-blur-sm transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-text-primary)]"
+    >
+      AUDIO: MUTED
+    </button>
+
+    <button
+      type="button"
+      id="intro-video-skip-btn"
+      aria-label="Skip intro video"
+      class="inline-flex cursor-pointer items-center gap-2 border border-[var(--color-amber)] bg-[color:rgba(9,13,22,0.9)] px-5 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-amber)] uppercase backdrop-blur-sm transition-colors hover:bg-[var(--color-amber)] hover:text-[var(--color-void)]"
+    >
+      <span>SKIP</span>
+      <span aria-hidden="true">-&gt;</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'abnf_intro_seen_v1';
+
+  const overlay = document.getElementById('intro-video-overlay');
+  const video = document.getElementById('intro-video-player') as HTMLVideoElement | null;
+  const fallback = document.getElementById('intro-video-fallback');
+  const skipBtn = document.getElementById('intro-video-skip-btn');
+  const muteBtn = document.getElementById('intro-video-mute-btn');
+
+  let previousFocus: HTMLElement | null = null;
+
+  const hasSeenIntro = (): boolean => {
+    try {
+      return window.localStorage.getItem(STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  const markIntroSeen = (): void => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, '1');
+    } catch {
+      // Ignore storage errors in restricted browsing contexts
+    }
+  };
+
+  const syncMuteLabel = (): void => {
+    if (!video || !muteBtn) return;
+    muteBtn.textContent = video.muted ? 'AUDIO: MUTED' : 'AUDIO: ON';
+  };
+
+  const closeIntro = (): void => {
+    if (!overlay || overlay.hidden) return;
+    markIntroSeen();
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
+    }
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+    if (previousFocus && typeof previousFocus.focus === 'function') {
+      previousFocus.focus();
+      previousFocus = null;
+    }
+  };
+
+  const openIntro = ({ autoPlayMuted }: { autoPlayMuted: boolean }): void => {
+    if (!overlay || !video) return;
+    previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (fallback) fallback.hidden = true;
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+
+    video.currentTime = 0;
+    video.muted = autoPlayMuted;
+    syncMuteLabel();
+
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // If unmuted autoplay is blocked, retry muted
+        if (!video.muted) {
+          video.muted = true;
+          syncMuteLabel();
+          video.play().catch(() => {});
+        }
+      });
+    }
+
+    skipBtn?.focus();
+  };
+
+  skipBtn?.addEventListener('click', closeIntro);
+
+  muteBtn?.addEventListener('click', () => {
+    if (!video) return;
+    video.muted = !video.muted;
+    syncMuteLabel();
+  });
+
+  video?.addEventListener('ended', closeIntro);
+
+  video?.addEventListener('error', () => {
+    if (fallback) fallback.hidden = false;
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && overlay && !overlay.hidden) {
+      closeIntro();
+    }
+  });
+
+  window.addEventListener('abnf:open-intro', () => {
+    openIntro({ autoPlayMuted: false });
+  });
+
+  // Show fullscreen intro automatically on the user's first visit
+  if (!hasSeenIntro()) {
+    openIntro({ autoPlayMuted: true });
+  }
+</script>
