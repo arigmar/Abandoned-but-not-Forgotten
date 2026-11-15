@@ -1,0 +1,127 @@
+---
+import type { ArchiveSnapshot } from '../lib/archive';
+
+interface Props {
+  snapshot: ArchiveSnapshot;
+}
+
+const { snapshot } = Astro.props;
+---
+
+<div id="kpi-strip" class="space-y-3" aria-label="Archive telemetry summary">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Artifacts Cataloged
+    </p>
+    <p class="mt-2 font-mono-telemetry text-2xl font-bold text-[var(--color-text-primary)]">
+      <span data-kpi="count">{snapshot.totalCount}</span>
+      <span class="text-sm font-normal text-[var(--color-text-secondary)]">
+        / {snapshot.totalCount}
+      </span>
+    </p>
+    <p
+      data-kpi="verified-summary"
+      class="mt-1 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]"
+    >
+      {snapshot.verifiedCount} VERIFIED · {snapshot.pendingCount} TO VERIFY
+    </p>
+  </div>
+
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Planetary Split
+    </p>
+    <p
+      data-kpi="body-split"
+      class="mt-2 font-mono-telemetry text-2xl font-bold text-[var(--color-text-primary)]"
+    >
+      MARS {snapshot.marsCount} / MOON {snapshot.moonCount}
+    </p>
+    <p class="mt-1 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
+      SURFACE HARDWARE REGISTRY
+    </p>
+  </div>
+
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Combined Silence
+    </p>
+    <p
+      data-kpi="combined-silence"
+      aria-hidden="true"
+      class="mt-2 font-mono-telemetry text-lg font-bold tracking-[0.04em] text-[var(--color-turquoise)] sm:text-xl"
+    >
+      {snapshot.combinedSilenceMono}
+    </p>
+    <p data-kpi="combined-silence-sr" class="sr-only">
+      {snapshot.combinedSilenceAccessible}
+    </p>
+    <p class="mt-1 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]">
+      CUMULATIVE NON-TRANSMISSION
+    </p>
+  </div>
+
+  <div class="surface-slate p-4">
+    <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+      Most Recent Last Contact
+    </p>
+    <p
+      data-kpi="latest-date"
+      class="mt-2 font-mono-telemetry text-2xl font-bold text-[var(--color-text-primary)]"
+    >
+      {snapshot.mostRecentContact ? `${snapshot.mostRecentContact.lastContactDate}` : 'NONE'}
+    </p>
+    <p
+      data-kpi="latest-name"
+      class="mt-1 truncate font-mono-telemetry text-[11px] text-[var(--color-turquoise)]"
+    >
+      {snapshot.mostRecentContact ? `${snapshot.mostRecentContact.name.toUpperCase()} · UTC` : 'NO MATCHING SIGNAL'}
+    </p>
+  </div>
+  </div>
+
+  <!-- Field Exploration Progress Bar (Gray -> Turquoise Inspected -> Amber Recovered) -->
+  <div class="surface-slate flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-1.5 sm:max-w-lg sm:flex-1">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="font-mono-telemetry text-[11px] font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase">
+          Mission Exploration Tracker
+        </span>
+        <span class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
+          OPEN PLAQUES TO INSPECT · HOLD LINK TO RECOVER
+        </span>
+      </div>
+      <div
+        class="relative h-2 w-full overflow-hidden border border-[var(--color-border)] bg-[var(--color-void)]"
+        aria-hidden="true"
+      >
+        <div
+          data-discovery-bar="inspected"
+          class="absolute inset-y-0 left-0 bg-[var(--color-turquoise)] transition-all duration-300"
+          style="width: 0%"
+        ></div>
+        <div
+          data-discovery-bar="recovered"
+          class="absolute inset-y-0 left-0 bg-[var(--color-amber)] transition-all duration-300"
+          style="width: 0%"
+        ></div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-turquoise)] uppercase">
+        <span class="h-1.5 w-1.5 bg-[var(--color-turquoise)]" aria-hidden="true"></span>
+        <span>
+          INSPECTED: <strong data-discovery="inspected">0</strong> / {snapshot.totalCount}
+        </span>
+      </span>
+      <span class="inline-flex items-center gap-1.5 border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-amber)] uppercase">
+        <span class="h-1.5 w-1.5 bg-[var(--color-amber)]" aria-hidden="true"></span>
+        <span>
+          RECOVERED: <strong data-discovery="recovered">0</strong> / {snapshot.totalCount}
+        </span>
+      </span>
+    </div>
+  </div>
+</div>

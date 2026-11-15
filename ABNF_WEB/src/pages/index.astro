@@ -1,0 +1,294 @@
+---
+import '../styles/global.css';
+import { SITE } from '../config/site';
+import { getArchiveSnapshot, getArtifacts, type ArtifactType } from '../lib/archive';
+import Navbar from '../components/Navbar.astro';
+import Hero from '../components/Hero.astro';
+import ExpeditionSection from '../components/ExpeditionSection.astro';
+import PendingSection from '../components/PendingSection.astro';
+import KpiStrip from '../components/KpiStrip.astro';
+import Filters from '../components/Filters.astro';
+import SurfaceAtlas from '../components/SurfaceAtlas.astro';
+import TimeScrubber from '../components/TimeScrubber.astro';
+import Lifeline from '../components/Lifeline.astro';
+import ArtifactCard from '../components/ArtifactCard.astro';
+import PlaqueDialog from '../components/PlaqueDialog.astro';
+import GameFrame from '../components/GameFrame.astro';
+
+const artifacts = await getArtifacts();
+const snapshot = await getArchiveSnapshot(artifacts);
+
+const availableTypes = [...new Set(artifacts.map((a) => a.type))] as ArtifactType[];
+
+// Strip build-time ImageMetadata before embedding JSON for client interactivity
+const clientCatalog = {
+  minYear: snapshot.minYear,
+  maxYear: snapshot.maxYear,
+  artifacts: artifacts.map((artifact) => ({
+    ...artifact,
+    image: artifact.image
+      ? {
+          src: artifact.image.src,
+          width: artifact.image.width,
+          height: artifact.image.height,
+          alt: artifact.image.alt,
+          credit: artifact.image.credit,
+          originalUrl: artifact.image.originalUrl,
+        }
+      : undefined,
+  })),
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/favicon.svg`} />
+    <link rel="icon" href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/favicon.ico`} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={SITE.premise} />
+    <meta property="og:title" content={`${SITE.name} — ${SITE.tagline}`} />
+    <meta property="og:description" content={SITE.premise} />
+    <meta property="og:type" content="website" />
+    <title>{SITE.name} — {SITE.tagline}</title>
+  </head>
+  <body>
+    <!-- Global Cold Monochrome Duotone SVG Filter (applied to NASA photos & schematics) -->
+    <svg width="0" height="0" class="absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="cold-duotone-filter" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="
+              0.2126 0.7152 0.0722 0 0
+              0.2126 0.7152 0.0722 0 0
+              0.2126 0.7152 0.0722 0 0
+              0      0      0      1 0"
+          />
+          <feComponentTransfer>
+            <feFuncR type="table" tableValues="0.035 0.478 0.902" />
+            <feFuncG type="table" tableValues="0.051 0.537 0.925" />
+            <feFuncB type="table" tableValues="0.086 0.651 0.961" />
+          </feComponentTransfer>
+        </filter>
+      </defs>
+    </svg>
+
+    <a
+      href="#archive"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-[var(--color-turquoise)] focus:bg-[var(--color-void)] focus:px-4 focus:py-2 focus:font-mono-telemetry focus:text-xs focus:text-[var(--color-turquoise)]"
+    >
+      Skip to Surface Archive
+    </a>
+
+    <Navbar />
+
+    <main>
+      <!-- 01 SIGNAL -->
+      <Hero artifacts={artifacts} />
+
+      <!-- 02 EXPEDITION (3D Exterior Reconnaissance Game) -->
+      <ExpeditionSection artifacts={artifacts} />
+
+      <!-- 03 SIMULATOR (Active GameFrame) -->
+      <PendingSection
+        id="simulator"
+        number="03"
+        title="Field Simulator — Surface Uplink"
+        description="Interactive Scratch / TurboWarp surface exploration mission (Postcards from Silence) — navigate planetary terrain, locate dormant NASA spacecraft, and establish surface telemetry uplinks."
+        state="active"
+      >
+        <GameFrame />
+      </PendingSection>
+
+      <!-- 04 STORY (Pending) -->
+      <PendingSection
+        id="story"
+        number="04"
+        title="Mission Context &amp; Scrollytelling"
+        description="Guided visual sequence documenting how planetary rovers, landers, and seismic stations transition from active science missions to enduring monuments on Mars and the Moon."
+        state="pending"
+      />
+
+      <!-- 05 ARCHIVE (Active Dashboard) -->
+      <section
+        id="archive"
+        data-state="active"
+        class="border-b border-[var(--color-border)] bg-[var(--color-void)] py-14 sm:py-20"
+        aria-labelledby="archive-heading"
+      >
+        <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6">
+          <!-- Section Heading -->
+          <div class="flex flex-col gap-3 border-b border-[var(--color-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+                SECTION 05 / 06 · SURFACE ARCHIVE DASHBOARD
+              </p>
+              <h2
+                id="archive-heading"
+                class="mt-1.5 font-serif-display text-4xl tracking-tight text-[var(--color-text-primary)] sm:text-5xl"
+              >
+                Cataloged Scientific Monuments
+              </h2>
+            </div>
+            <p class="max-w-md text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
+              Filter by celestial body or hardware class, scrub mission epochs across time, or open any archival plaque for verified telemetry and symbolic link recovery.
+            </p>
+          </div>
+
+          <!-- 1. KPI Strip -->
+          <KpiStrip snapshot={snapshot} />
+
+          <!-- 2. Filters -->
+          <Filters totalCount={artifacts.length} availableTypes={availableTypes} />
+
+          <!-- 3. Surface Atlas (Mars | Moon) -->
+          <SurfaceAtlas artifacts={artifacts} />
+
+          <!-- 4. Time Scrubber + Lifeline -->
+          <div class="space-y-4">
+            <TimeScrubber
+              minYear={snapshot.minYear}
+              maxYear={snapshot.maxYear}
+              initialCount={artifacts.length}
+            />
+            <Lifeline
+              artifacts={artifacts}
+              minYear={snapshot.minYear}
+              maxYear={snapshot.maxYear}
+              baseDate={SITE.baseDate}
+            />
+          </div>
+
+          <!-- 5. Artifact Bento Grid + Scanner Lens -->
+          <div class="space-y-3 pt-2">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase">
+                  Registry Plates &amp; Inspection Grid
+                </h3>
+                <p class="mt-0.5 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
+                  MOVE POINTER (OR TOGGLE SCAN MODE TO DRAG BY TOUCH) FOR TURQUOISE SCANNER LENS · ALL DATA READABLE AT REST
+                </p>
+              </div>
+              <button
+                type="button"
+                id="scan-mode-toggle"
+                aria-pressed="false"
+                class="border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+              >
+                <span id="scan-mode-label">SCAN MODE: OFF</span>
+              </button>
+            </div>
+
+            <div
+              id="artifact-grid"
+              data-scan-mode="false"
+              class="relative grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+            >
+              <!-- Functional Scanner Lens Ring (progressive enhancement only) -->
+              <div
+                id="scanner-lens"
+                hidden
+                aria-hidden="true"
+                class="pointer-events-none absolute z-20 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--color-turquoise-border)]"
+                style="background: radial-gradient(circle, rgba(46, 196, 182, 0.14) 0%, rgba(46, 196, 182, 0.04) 55%, rgba(46, 196, 182, 0) 75%);"
+              ></div>
+
+              {
+                artifacts.map((artifact) => (
+                  <ArtifactCard artifact={artifact} baseDate={SITE.baseDate} />
+                ))
+              }
+            </div>
+
+            <!-- Empty Filter State -->
+            <div
+              id="archive-empty-state"
+              hidden
+              class="surface-slate flex flex-col items-center justify-center p-8 text-center"
+            >
+              <p class="font-mono-telemetry text-xs font-bold tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+                NO SIGNAL IN THIS FILTER
+              </p>
+              <p class="mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">
+                No cataloged surface hardware matches the combined planetary body and hardware class filter.
+              </p>
+              <button
+                type="button"
+                id="reset-filters-empty"
+                class="mt-4 border border-[var(--color-turquoise-border)] bg-[var(--color-void)] px-4 py-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-turquoise)] uppercase hover:bg-[var(--color-turquoise-dim)]"
+              >
+                Restore All Signals
+              </button>
+            </div>
+          </div>
+
+          <!-- 6 & 7. Museum Plaque Dialog + HoldToLink -->
+          <PlaqueDialog artifacts={artifacts} />
+        </div>
+
+        <script
+          type="application/json"
+          id="archive-catalog-data"
+          set:html={JSON.stringify(clientCatalog)}
+        />
+        <script>
+          import { initArchiveDashboard } from '../lib/archive-controller';
+          initArchiveDashboard();
+        </script>
+      </section>
+
+      <!-- 06 SOURCES & CREDITS (Pending) -->
+      <PendingSection
+        id="sources"
+        number="06"
+        title="Sources, Credits &amp; Verification Registry"
+        description="Dedicated archival bibliography consolidating NASA Science, NSSDCA Master Catalog entries, PDS coordinates, and open media usage attributions."
+        state="pending"
+      >
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {
+            artifacts.map((artifact) => (
+              <div class="border border-[var(--color-border)] bg-[var(--color-void)] p-3 font-mono-telemetry text-[11px]">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-bold text-[var(--color-text-primary)]">{artifact.name}</span>
+                  <span
+                    class={
+                      artifact.verification === 'verified'
+                        ? 'border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-1.5 py-0.5 text-[10px] text-[var(--color-turquoise)]'
+                        : 'inline-flex items-center gap-1 border border-[var(--color-alert-border)] bg-[var(--color-alert-dim)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-primary)]'
+                    }
+                  >
+                    {artifact.verification === 'verified' ? 'VERIFIED' : 'DATA TO VERIFY'}
+                  </span>
+                </div>
+                <p class="mt-1 text-[10px] text-[var(--color-text-secondary)]">
+                  NSSDCA {artifact.nssdcId} · {artifact.sources.length} official NASA sources logged
+                </p>
+              </div>
+            ))
+          }
+        </div>
+      </PendingSection>
+    </main>
+
+    <footer class="bg-[var(--color-void)] py-10">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <p class="font-mono-telemetry text-xs font-bold tracking-[0.16em] text-[var(--color-text-primary)] uppercase">
+            {SITE.name} · {SITE.tagline}
+          </p>
+          <p class="mt-1 max-w-2xl text-xs text-[var(--color-text-secondary)]">
+            Mission telemetry and schematic attributions cite public NASA Science and NSSDCA Master Catalog records. Independent NASA Space Apps Challenge entry; not endorsed by NASA.
+          </p>
+        </div>
+        <p class="font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-secondary)]">
+          STATIC ARCHIVE BUILD · {SITE.baseDate.slice(0, 10)} UTC
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

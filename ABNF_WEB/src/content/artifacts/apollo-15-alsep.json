@@ -1,0 +1,57 @@
+{
+  "id": "apollo-15-alsep",
+  "name": "Apollo 15 ALSEP",
+  "nssdcId": "1971-063C",
+  "agency": "NASA",
+  "body": "moon",
+  "type": "instrument-station",
+  "launchDate": "1971-07-26",
+  "lastContactDate": "1977-09-30",
+  "site": {
+    "name": "Palus Putredinis (Hadley–Apennine)",
+    "lat": 26.1341,
+    "lon": 3.6299,
+    "description": "Deployed northwest of the Apollo 15 Lunar Module Falcon landing site near Hadley Rille and the Apennine mountain front."
+  },
+  "endCause": "Transmitters across the active ALSEP network were permanently commanded off by NASA Johnson Space Center on September 30, 1977 due to ground-network budget constraints.",
+  "scientificValue": "Powered continuously by a SNAP-27 radioisotope thermoelectric generator, the Apollo 15 ALSEP transmitted surface geophysics telemetry for more than six years. Together with partner stations, it pinned down deep moonquake depths, measured endogenous lunar heat flow, and characterized the Moon's crust and upper mantle.",
+  "kidSummary": "Powered by a nuclear SNAP-27 battery instead of sunlight, this Apollo 15 station measured moonquakes and deep lunar heat continuously for over six years—even through freezing two-week lunar nights.",
+  "sizeFact": "6+ years active (75 lunar cycles) · SNAP-27 nuclear battery",
+  "legacy": [
+    {
+      "finding": "Conducted the first direct subsurface lunar heat-flow measurements using borehole thermal probes drilled into regolith at Hadley–Apennine.",
+      "sourceTitle": "NASA NSSDCA Master Catalog — Apollo 15 ALSEP (1971-063C)",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C"
+    },
+    {
+      "finding": "Anchored the multi-station Apollo seismic network for over six years, locating deep moonquake zones and meteoroid impacts across the lunar globe.",
+      "sourceTitle": "NASA Science — Apollo 15 Mission Overview",
+      "sourceUrl": "https://science.nasa.gov/mission/apollo-15/"
+    },
+    {
+      "finding": "Sampled lunar surface magnetic fields, solar-wind plasma ions, and neutral exospheric gas continuously across 75 lunar day–night cycles.",
+      "sourceTitle": "NASA NSSDCA Master Catalog — Apollo 15 ALSEP (1971-063C)",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C"
+    }
+  ],
+  "verification": "verified",
+  "sources": [
+    {
+      "title": "NASA NSSDCA Master Catalog — Apollo 15 ALSEP / LM (1971-063C)",
+      "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C",
+      "accessedDate": "2026-11-14"
+    },
+    {
+      "title": "NASA Science — Apollo 15",
+      "url": "https://science.nasa.gov/mission/apollo-15/",
+      "accessedDate": "2026-11-14"
+    }
+  ],
+  "image": {
+    "file": "../../assets/artifacts/apollo-15-alsep.svg",
+    "alt": "Monochrome technical schematic of the Apollo 15 ALSEP station depicting the SNAP-27 radioisotope generator, central telemetry station antenna mast, and cabled seismic and heat-flow probes.",
+    "credit": "Archival technical schematic based on NASA Apollo 15 ALSEP documentation",
+    "originalUrl": "https://science.nasa.gov/mission/apollo-15/"
+  },
+  "featured": false
+}

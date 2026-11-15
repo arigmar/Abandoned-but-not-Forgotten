@@ -1,0 +1,172 @@
+---
+import type { Artifact } from '../lib/archive';
+import { formatOperationalDuration, formatSilenceCompact } from '../lib/silence';
+
+interface Props {
+  artifacts: Artifact[];
+  minYear: number;
+  maxYear: number;
+  baseDate: string;
+}
+
+const { artifacts, minYear, maxYear, baseDate } = Astro.props;
+const baseMs = Date.parse(baseDate);
+const span = Math.max(1, maxYear - minYear);
+const axisTicks = [minYear, 1980, 1995, 2010, maxYear];
+
+function toPercent(dateIso: string): number {
+  const year = Number.parseInt(dateIso.slice(0, 4), 10);
+  const month = Number.parseInt(dateIso.slice(5, 7), 10) - 1;
+  const decimalYear = year + month / 12;
+  const pct = ((decimalYear - minYear) / span) * 100;
+  return Math.min(100, Math.max(0, Number(pct.toFixed(2))));
+}
+---
+
+<div class="surface-slate p-4 sm:p-5">
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
+    <div>
+      <h3 class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase">
+        Mission Lifelines // Operational vs. Silence Span
+      </h3>
+      <p class="mt-0.5 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]">
+        HORIZONTAL TELEMETRY BARS ({minYear}–{maxYear} UTC) · CLICK ANY ROW TO OPEN PLAQUE
+      </p>
+    </div>
+    <p
+      id="lifeline-tooltip"
+      class="font-mono-telemetry text-[11px] text-[var(--color-turquoise)]"
+    >
+      HOVER OR FOCUS A LIFELINE ROW FOR EXACT DATES
+    </p>
+  </div>
+
+  <!-- Timeline Axis Header -->
+  <div class="mb-2 hidden grid-cols-12 items-center gap-3 sm:grid">
+    <div class="col-span-4 font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase">
+      Artifact / Span
+    </div>
+    <div class="relative col-span-8 h-5">
+      {
+        axisTicks.map((tick) => {
+          const leftPct = Math.min(96, Math.max(0, ((tick - minYear) / span) * 100));
+          return (
+            <span
+              style={`left: ${leftPct}%`}
+              class="absolute top-0 -translate-x-1/2 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)]"
+            >
+              {tick}
+            </span>
+          );
+        })
+      }
+    </div>
+  </div>
+
+  <!-- Artifact Lifeline Rows -->
+  <div class="space-y-2" id="lifeline-rows" role="list">
+    {
+      artifacts.map((artifact) => {
+        const launchPct = toPercent(artifact.launchDate);
+        const endPct = toPercent(artifact.lastContactDate);
+        const opWidthPct = Math.max(1.2, Number((endPct - launchPct).toFixed(2)));
+        const silenceWidthPct = Math.max(0.8, Number((100 - endPct).toFixed(2)));
+        const opDuration = formatOperationalDuration(artifact.launchDate, artifact.lastContactDate);
+        const silentDuration = formatSilenceCompact(artifact.lastContactDate, baseMs);
+        const launchYear = artifact.launchDate.slice(0, 4);
+        const endYear = artifact.lastContactDate.slice(0, 4);
+
+        return (
+          <button
+            type="button"
+            role="listitem"
+            data-lifeline-row={artifact.id}
+            data-open-plaque={artifact.id}
+            data-body={artifact.body}
+            data-type={artifact.type}
+            data-launch-date={artifact.launchDate}
+            data-last-contact={artifact.lastContactDate}
+            data-launch-year={launchYear}
+            data-end-year={endYear}
+            data-op-duration={opDuration}
+            data-silence-duration={silentDuration}
+            data-timeline-state="silent"
+            class="lifeline-row grid w-full grid-cols-1 items-center gap-2 border border-[var(--color-border)] bg-[var(--color-void)] p-2.5 text-left transition-colors sm:grid-cols-12 sm:gap-3"
+          >
+            <!-- Always-visible metadata label -->
+            <div class="flex items-center justify-between gap-2 sm:col-span-4">
+              <div class="min-w-0">
+                <p class="truncate font-sans-body text-sm font-semibold text-[var(--color-text-primary)]">
+                  {artifact.name}
+                </p>
+                <p class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
+                  {artifact.body.toUpperCase()} · {launchYear}–{endYear}
+                </p>
+              </div>
+              <span
+                data-lifeline-badge={artifact.id}
+                class="shrink-0 border border-[var(--color-border)] px-1.5 py-0.5 font-mono-telemetry text-[9px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase"
+              >
+                SILENT
+              </span>
+            </div>
+
+            <!-- Proportional SVG-like precision bar track -->
+            <div class="relative h-6 border border-[var(--color-border)] bg-[var(--color-slate)] sm:col-span-8">
+              {/* Operating segment */}
+              <div
+                data-lifeline-op={artifact.id}
+                style={`left: ${launchPct}%; width: ${opWidthPct}%`}
+                class="lifeline-op-bar absolute top-1 bottom-1 bg-[var(--color-text-primary)] opacity-55 transition-colors"
+                title={`Active mission: ${artifact.launchDate} to ${artifact.lastContactDate}`}
+              />
+              {/* Silence segment */}
+              <div
+                data-lifeline-silence={artifact.id}
+                style={`left: ${endPct}%; width: ${silenceWidthPct}%`}
+                class="lifeline-silence-bar absolute top-2 bottom-2 bg-[var(--color-dormant)] opacity-45 transition-colors"
+                title={`Silent since ${artifact.lastContactDate}`}
+              />
+              {/* Vertical playhead controlled by TimeScrubber */}
+              <div
+                data-lifeline-playhead
+                style="left: 100%"
+                class="absolute top-0 bottom-0 w-0.5 bg-[var(--color-turquoise)]"
+                aria-hidden="true"
+              />
+            </div>
+          </button>
+        );
+      })
+    }
+  </div>
+</div>
+
+<style>
+  .lifeline-row:hover,
+  .lifeline-row:focus-visible {
+    border-color: var(--color-turquoise);
+    background-color: var(--color-turquoise-dim);
+  }
+
+  .lifeline-row:hover .lifeline-op-bar,
+  .lifeline-row:focus-visible .lifeline-op-bar {
+    background-color: var(--color-turquoise);
+    opacity: 0.95;
+  }
+
+  .lifeline-row[data-timeline-state='pre-launch'] {
+    opacity: 0.42;
+  }
+
+  .lifeline-row[data-timeline-state='operating'] .lifeline-op-bar {
+    background-color: var(--color-amber);
+    opacity: 0.95;
+  }
+
+  .lifeline-row[data-timeline-state='operating'] [data-lifeline-badge] {
+    border-color: var(--color-amber-border);
+    background-color: var(--color-amber-dim);
+    color: var(--color-amber);
+  }
+</style>

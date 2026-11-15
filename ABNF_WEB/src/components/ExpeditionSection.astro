@@ -1,0 +1,1117 @@
+---
+import type { Artifact } from '../lib/archive';
+import { withBase } from '../lib/base-path';
+
+interface Props {
+  artifacts: Artifact[];
+}
+
+const { artifacts } = Astro.props;
+
+// Strip build-time ImageMetadata so only pure text & coordinates serialize to client
+const expeditionCatalog = artifacts.map((artifact) => ({
+  id: artifact.id,
+  name: artifact.name,
+  nssdcId: artifact.nssdcId,
+  agency: artifact.agency,
+  body: artifact.body,
+  type: artifact.type,
+  launchDate: artifact.launchDate,
+  lastContactDate: artifact.lastContactDate,
+  site: artifact.site,
+  endCause: artifact.endCause,
+  scientificValue: artifact.scientificValue,
+  kidSummary: artifact.kidSummary,
+  sizeFact: artifact.sizeFact,
+  legacy: artifact.legacy,
+  verification: artifact.verification,
+  verificationNote: artifact.verificationNote,
+  sources: artifact.sources,
+  featured: artifact.featured,
+}));
+
+const vueloUrl = withBase('/vuelo');
+---
+
+<section
+  id="expedition"
+  data-state="active"
+  data-vuelo-url={vueloUrl}
+  class="border-b border-[var(--color-border)] bg-[var(--color-void)] py-14 sm:py-18"
+  aria-labelledby="expedition-heading"
+>
+  <div class="mx-auto max-w-7xl space-y-6 px-4 sm:px-6">
+    <!-- Section Header -->
+    <div class="flex flex-col gap-3 border-b border-[var(--color-border)] pb-5 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <p class="font-mono-telemetry text-[11px] tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+          02 // SPACE &amp; SURFACE SIMULATOR · SECTION 02 / 06
+        </p>
+        <h2
+          id="expedition-heading"
+          class="mt-1.5 font-serif-display text-4xl tracking-tight text-[var(--color-text-primary)] sm:text-5xl"
+        >
+          Orbital Flight &amp; Surface Explorer
+        </h2>
+        <p class="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
+          Start in open deep space between Earth, the Moon, and Mars. Land under real gravity, deploy your rover to inspect dormant monuments nearby, or blast back off into orbit to explore another world.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <div
+          class="flex items-center gap-1.5 border border-[var(--color-border)] bg-[var(--color-slate)] p-1"
+          role="group"
+          aria-label="Expedition reading style"
+        >
+          <button
+            type="button"
+            data-expedition-reading-mode="explorer"
+            aria-pressed="true"
+            class="expedition-mode-btn cursor-pointer border border-transparent px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase transition-colors"
+          >
+            Explorer Mode
+          </button>
+          <button
+            type="button"
+            data-expedition-reading-mode="technical"
+            aria-pressed="false"
+            class="expedition-mode-btn cursor-pointer border border-transparent px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase transition-colors"
+          >
+            Mission Log
+          </button>
+        </div>
+
+        <span class="border border-[var(--color-border)] bg-[var(--color-slate)] px-2.5 py-1.5 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
+          Unified 3D Engine
+        </span>
+      </div>
+    </div>
+
+    <!-- Main Unified 3D Viewport (Spaceflight -> Powered Landing -> Surface Rover -> Liftoff to Orbit) -->
+    <div
+      id="expedition-stage"
+      data-phase="standby"
+      class="relative min-h-[460px] w-full overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-void)] sm:min-h-0 sm:aspect-video"
+    >
+      <!-- Pre-Launch Standby Overlay -->
+      <div
+        id="expedition-standby"
+        class="flex h-full w-full flex-col justify-between bg-reticle-grid p-5 sm:p-7"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
+          <div class="flex items-center gap-2 font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-turquoise)]">
+            <span class="h-2 w-2 bg-[var(--color-turquoise)]" aria-hidden="true" />
+            <span>3D SPACE SIMULATOR · UNIFIED ORBIT &amp; SURFACE</span>
+          </div>
+          <span class="font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]">
+            EARTH &middot; MOON (1.62 M/S&sup2;) &middot; MARS (3.72 M/S&sup2;)
+          </span>
+        </div>
+
+        <div class="my-auto max-w-2xl space-y-4 py-4">
+          <p class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-amber)] uppercase">
+            Main Flight Simulator // Open Interplanetary Transit
+          </p>
+          <h3
+            id="expedition-standby-title"
+            class="font-serif-display text-3xl text-[var(--color-text-primary)] sm:text-4xl"
+          >
+            Interplanetary Space &amp; Surface Simulator
+          </h3>
+          <p
+            id="expedition-standby-summary"
+            class="text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm"
+          >
+            Fly from Earth orbit to the Moon or Mars, touch down on the landing apron, and drive your miniature rover to all historical monuments placed in their real planetary zones.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-2.5 pt-1">
+            <button
+              type="button"
+              id="expedition-standby-launch-btn"
+              class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-5 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
+            >
+              <span>Launch Space Simulator</span>
+              <span aria-hidden="true">-&gt;</span>
+            </button>
+            <button
+              type="button"
+              id="expedition-standby-surface-btn"
+              data-expedition-deploy-body="mars"
+              class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-4 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase transition-colors hover:border-[var(--color-amber)]"
+            >
+              <span>Deploy Mars (3 Sites)</span>
+            </button>
+            <button
+              type="button"
+              data-expedition-deploy-body="moon"
+              class="inline-flex cursor-pointer items-center justify-center gap-2 border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-4 py-2.5 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase transition-colors hover:border-[var(--color-turquoise)]"
+            >
+              <span>Deploy Moon (3 Sites)</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2 pt-1 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)] sm:grid-cols-2">
+            <div class="border border-[var(--color-border)] bg-[var(--color-slate)] px-3 py-2">
+              <strong class="text-[var(--color-text-primary)]">FLIGHT &amp; LANDING:</strong> W/Space Thrust &middot; WASD/Arrows Steer &middot; [1]/[2] Moon/Mars &middot; G Auto-Cruise/Land &middot; R Retry
+            </div>
+            <div class="border border-[var(--color-border)] bg-[var(--color-slate)] px-3 py-2">
+              <strong class="text-[var(--color-text-primary)]">SURFACE &amp; ORBIT RETURN:</strong> Touch down -&gt; [E] Explore Surface or [L] Launch to Orbit anytime from rover or pad
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-border)] pt-3 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)]">
+          <span>ONE SEAMLESS ENGINE · ZERO MONUMENT LOCK-INS</span>
+          <label class="inline-flex cursor-pointer items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+            <input
+              type="checkbox"
+              id="expedition-fullscreen-toggle"
+              class="h-3.5 w-3.5 accent-[var(--color-turquoise)]"
+            />
+            <span>Fullscreen on launch</span>
+          </label>
+          <span class="text-[var(--color-turquoise)]">ALL 3 MARS &amp; ALL 3 MOON SITES SPAWN ON THEIR REAL ZONES</span>
+        </div>
+      </div>
+
+      <!-- /vuelo Layer: Active ONLY during PHASE 01 (Flight View) -->
+      <div
+        id="expedition-vuelo-container"
+        hidden
+        class="absolute inset-0 z-[5] h-full w-full bg-[var(--color-void)]"
+      >
+        <iframe
+          id="expedition-vuelo-frame"
+          title="Interplanetary Space Flight View (/vuelo)"
+          class="h-full w-full border-0 bg-[var(--color-void)]"
+          allow="fullscreen"
+        ></iframe>
+      </div>
+
+      <!-- 3D Canvas (used natively for Powered Landing, Surface Rover & Monument Inspection) -->
+      <canvas
+        id="expedition-canvas"
+        role="img"
+        aria-label="Interactive 3D orbital flight, powered planetary landing, rover surface exploration, and liftoff to orbit viewport"
+        class="block h-full w-full outline-none"
+        hidden
+      ></canvas>
+
+      <!-- Active DOM HUD Overlay (uses page CSS fonts, never canvas text) -->
+      <div
+        id="expedition-hud"
+        hidden
+        class="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-2.5 sm:p-4"
+      >
+        <!-- Top HUD Bar -->
+        <div class="pointer-events-auto relative z-20 space-y-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-2 border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.88)] px-3 py-2 backdrop-blur-xs">
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                id="hud-phase-label"
+                class="border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2 py-0.5 font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
+              >
+                PHASE 01 // SPACE FLIGHT
+              </span>
+              <span
+                id="hud-target-name"
+                class="font-serif-display text-lg leading-none text-[var(--color-text-primary)] sm:text-xl"
+              ></span>
+              <span
+                id="hud-nssdc"
+                class="hidden font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] sm:inline"
+              ></span>
+              <span
+                id="hud-verification-badge"
+                hidden
+                class="inline-flex items-center gap-1 border border-[var(--color-alert-border)] bg-[var(--color-alert-dim)] px-1.5 py-0.5 font-mono-telemetry text-[9px] font-bold tracking-[0.1em] text-[var(--color-text-primary)] uppercase"
+              >
+                <svg viewBox="0 0 16 16" class="h-3 w-3 text-[var(--color-alert)]" fill="currentColor" aria-hidden="true">
+                  <path d="M8 1.5L15 14H1L8 1.5ZM7.25 6V10H8.75V6H7.25ZM7.25 11.25V12.75H8.75V11.25H7.25Z" />
+                </svg>
+                DATA TO VERIFY
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span
+                id="hud-scale-pill"
+                class="hidden border border-[var(--color-border)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[9px] tracking-[0.06em] text-[var(--color-text-secondary)] lg:inline-block"
+              >
+                Distances compressed - not to scale
+              </span>
+              <div id="hud-target-switch" hidden class="inline-flex items-center gap-1">
+                <button
+                  type="button"
+                  id="hud-target-moon"
+                  class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
+                >
+                  Moon [1]
+                </button>
+                <button
+                  type="button"
+                  id="hud-target-mars"
+                  class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+                >
+                  Mars [2]
+                </button>
+              </div>
+              <button
+                type="button"
+                id="hud-assist-btn"
+                hidden
+                class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Auto-Cruise [G]
+              </button>
+              <button
+                type="button"
+                id="hud-retry-btn"
+                hidden
+                class="cursor-pointer border border-[var(--color-alert)] bg-[var(--color-alert-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-text-primary)] uppercase"
+              >
+                Retry Landing [R]
+              </button>
+              <button
+                type="button"
+                id="hud-orbit-btn"
+                hidden
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Launch to Orbit [L]
+              </button>
+              <button
+                type="button"
+                id="hud-skip-btn"
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Skip [ENTER]
+              </button>
+              <button
+                type="button"
+                id="hud-pause-btn"
+                class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+              >
+                Pause [ESC]
+              </button>
+              <button
+                type="button"
+                id="hud-fullscreen-btn"
+                class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+              >
+                Fullscreen
+              </button>
+              <button
+                type="button"
+                id="hud-exit-btn"
+                class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-void)] px-2 py-1 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-text-primary)]"
+              >
+                Exit
+              </button>
+            </div>
+          </div>
+
+          <!-- Site Coordinates & Distance Readout Strip -->
+          <div
+            id="hud-site-bar"
+            class="flex flex-wrap items-center justify-between gap-2 border border-[var(--color-border)] bg-[color:rgba(19,27,46,0.84)] px-3 py-1.5 font-mono-telemetry text-[10px]"
+          >
+            <div class="flex flex-wrap items-center gap-2 text-[var(--color-text-primary)]">
+              <span id="hud-site-name"></span>
+              <span class="text-[var(--color-text-secondary)]">&middot;</span>
+              <span id="hud-site-coords" class="text-[var(--color-turquoise)]"></span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="hud-distance-readout" class="text-[var(--color-text-secondary)]"></span>
+              <span
+                id="hud-state-badge"
+                data-discovery-state="dormant"
+                class="expedition-discovery-pill border border-[var(--color-border)] bg-[var(--color-void)] px-2 py-0.5 text-[9px] font-bold tracking-[0.1em] text-[var(--color-text-secondary)] uppercase"
+              >
+                DORMANT
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D-Projected Exterior Hotspot Reticle Buttons Layer (full viewport aligned to canvas) -->
+        <div
+          id="hud-hotspots-layer"
+          class="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+          aria-label="Monument exterior inspection points"
+        ></div>
+
+        <!-- Flex spacer keeping bottom HUD panels docked without shifting projected reticle coordinates -->
+        <div class="pointer-events-none flex-1" aria-hidden="true"></div>
+
+        <!-- Touchdown / Recovery Decision Card (stays inside the same 3D viewport after landing) -->
+        <div
+          id="hud-touchdown-card"
+          hidden
+          role="region"
+          aria-label="Planetary touchdown options"
+          class="pointer-events-auto relative z-20 mx-auto mb-2 w-full max-w-2xl border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.92)] p-4 shadow-lg backdrop-blur-xs sm:p-5"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+            <span
+              id="hud-touchdown-eyebrow"
+              class="font-mono-telemetry text-[10px] font-bold tracking-[0.14em] text-[var(--color-turquoise)] uppercase"
+            >
+              TOUCHDOWN CONFIRMED
+            </span>
+            <span class="font-mono-telemetry text-[9px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase">
+              SURFACE READY
+            </span>
+          </div>
+          <h4
+            id="hud-touchdown-title"
+            class="mt-2 font-serif-display text-2xl leading-tight text-[var(--color-text-primary)] sm:text-3xl"
+          ></h4>
+          <p
+            id="hud-touchdown-body"
+            class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm"
+          ></p>
+          <div class="mt-3.5 flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              id="hud-touchdown-explore-btn"
+              class="cursor-pointer border border-[var(--color-turquoise)] bg-[var(--color-turquoise)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#3ad8c9]"
+            >
+              Explore Surface (Rover) [E]
+            </button>
+            <button
+              type="button"
+              id="hud-touchdown-orbit-btn"
+              class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+            >
+              Launch to Orbit [L]
+            </button>
+            <button
+              type="button"
+              id="hud-touchdown-retry-btn"
+              class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-3.5 py-2 font-mono-telemetry text-xs tracking-[0.1em] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)]"
+            >
+              Retry Descent [R]
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Interactive Subsystem Diagnostic & Plaque Card -->
+        <div
+          id="hud-plaque-card"
+          hidden
+          role="region"
+          aria-label="Interactive monument subsystem diagnostics"
+          class="pointer-events-auto relative z-20 mx-auto mb-2 w-full max-w-2xl border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.95)] p-3.5 shadow-lg sm:p-4"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                id="hud-plaque-eyebrow"
+                class="font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
+              ></span>
+              <div id="hud-plaque-tabs" class="inline-flex items-center gap-1" role="group" aria-label="Subsystems 1 to 5"></div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span
+                id="hud-plaque-mode-pill"
+                class="border border-[var(--color-border)] bg-[var(--color-slate)] px-1.5 py-0.5 font-mono-telemetry text-[9px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase"
+              >
+                EXPLORER MODE
+              </span>
+              <button
+                type="button"
+                id="hud-plaque-close-btn"
+                class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-0.5 font-mono-telemetry text-[10px] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-[1.35fr_1fr] sm:items-start">
+            <div>
+              <h4
+                id="hud-plaque-title"
+                class="font-serif-display text-2xl leading-tight text-[var(--color-text-primary)]"
+              ></h4>
+              <p id="hud-plaque-body" class="mt-1.5 text-xs leading-relaxed text-[var(--color-text-primary)] sm:text-sm"></p>
+            </div>
+
+            <!-- Live Subsystem Waveform & Nominal/Shutdown Comparator -->
+            <div class="border border-[var(--color-border)] bg-[var(--color-void)] p-2.5">
+              <div class="flex items-center justify-between gap-2 font-mono-telemetry text-[9px] tracking-[0.08em] uppercase">
+                <span id="hud-plaque-metric-label" class="text-[var(--color-text-secondary)]"></span>
+                <button
+                  type="button"
+                  id="hud-plaque-sim-toggle"
+                  class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-1.5 py-0.5 text-[var(--color-amber)] hover:border-[var(--color-amber)]"
+                >
+                  NOMINAL OPS
+                </button>
+              </div>
+              <p id="hud-plaque-metric-value" class="mt-1 font-mono-telemetry text-xs font-bold text-[var(--color-turquoise)]"></p>
+              <div id="hud-plaque-wave" class="mt-1.5 h-10 w-full overflow-hidden border border-[var(--color-border)] bg-[color:rgba(19,27,46,0.5)]"></div>
+            </div>
+          </div>
+
+          <p
+            id="hud-plaque-test-result"
+            hidden
+            class="mt-2 border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1.5 font-mono-telemetry text-[10px] leading-snug text-[var(--color-text-primary)]"
+          ></p>
+
+          <div class="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+            <a
+              id="hud-plaque-source"
+              hidden
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-mono-telemetry text-[10px] text-[var(--color-amber)] underline underline-offset-2"
+            ></a>
+            <div class="ml-auto flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                id="hud-plaque-test-btn"
+                class="cursor-pointer border border-[var(--color-amber)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-amber)] uppercase hover:bg-[var(--color-amber)] hover:text-[var(--color-void)]"
+              >
+                Run Hardware Test [F]
+              </button>
+              <button
+                type="button"
+                id="hud-plaque-next-btn"
+                class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Next Point [E]
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Controls Bar: Surface Driving -->
+        <div
+          id="hud-drive-controls"
+          hidden
+          class="pointer-events-auto relative z-20 flex items-end justify-between gap-3"
+        >
+          <!-- Virtual Joystick for Touch / Pointer Driving -->
+          <div class="flex items-center gap-2.5">
+            <div
+              id="expedition-joystick"
+              role="application"
+              aria-label="Rover steering joystick"
+              class="relative flex h-24 w-24 touch-none select-none items-center justify-center rounded-full border border-[var(--color-turquoise-border)] bg-[color:rgba(9,13,22,0.82)]"
+            >
+              <div
+                id="expedition-joystick-thumb"
+                class="pointer-events-none h-9 w-9 rounded-full border border-[var(--color-turquoise)] bg-[var(--color-turquoise-dim)]"
+              ></div>
+            </div>
+            <p class="hidden font-mono-telemetry text-[10px] leading-tight text-[var(--color-text-secondary)] sm:block">
+              W/A/S/D or Arrows to Drive<br />Drag Viewport to Look &middot; [L] Orbit
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              id="hud-pulse-btn"
+              class="cursor-pointer border border-[var(--color-turquoise)] bg-[color:rgba(9,13,22,0.9)] px-3.5 py-2 font-mono-telemetry text-[11px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase hover:bg-[var(--color-turquoise-dim)]"
+            >
+              Pulse Sonar [SPACE]
+            </button>
+            <button
+              type="button"
+              id="hud-approach-btn"
+              class="cursor-pointer border border-[var(--color-amber-border)] bg-[color:rgba(9,13,22,0.9)] px-3.5 py-2 font-mono-telemetry text-[11px] font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:bg-[var(--color-amber-dim)]"
+            >
+              Auto-Approach [G]
+            </button>
+            <button
+              type="button"
+              id="hud-drive-orbit-btn"
+              class="cursor-pointer border border-[var(--color-amber)] bg-[color:rgba(9,13,22,0.92)] px-3.5 py-2 font-mono-telemetry text-[11px] font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:bg-[var(--color-amber-dim)]"
+            >
+              Launch to Orbit [L]
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom Controls Bar: Exterior Inspection & Hold-to-Link -->
+        <div
+          id="hud-inspect-controls"
+          hidden
+          class="pointer-events-auto relative z-20 flex flex-col gap-2.5 border border-[var(--color-border-strong)] bg-[color:rgba(9,13,22,0.9)] p-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              id="hud-hotspot-progress"
+              class="font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
+            >
+              SCANNED 0 / 5 EXTERIOR POINTS
+            </span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                id="hud-prev-hotspot"
+                class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                id="hud-scan-btn"
+                class="cursor-pointer border border-[var(--color-turquoise)] bg-[var(--color-turquoise-dim)] px-3 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase"
+              >
+                Scan Hotspot [E]
+              </button>
+              <button
+                type="button"
+                id="hud-next-hotspot"
+                class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2 py-1 font-mono-telemetry text-[10px] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)]"
+              >
+                Next
+              </button>
+              <button
+                type="button"
+                id="hud-return-drive-btn"
+                class="cursor-pointer border border-[var(--color-border)] bg-[var(--color-void)] px-2 py-1 font-mono-telemetry text-[10px] text-[var(--color-text-secondary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-text-primary)]"
+              >
+                Drive Mode
+              </button>
+              <button
+                type="button"
+                id="hud-inspect-orbit-btn"
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-2.5 py-1 font-mono-telemetry text-[10px] font-bold tracking-[0.08em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Launch to Orbit [L]
+              </button>
+            </div>
+          </div>
+
+          <!-- Hold-to-Link Symbolic Recovery (unlocked once all hotspots scanned) -->
+          <div id="hud-hold-panel" class="flex items-center gap-2.5">
+            <button
+              type="button"
+              id="hud-hold-btn"
+              disabled
+              class="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-slate)] disabled:cursor-not-allowed disabled:opacity-45"
+              aria-label="Hold to recover monumental archive link"
+            >
+              <svg viewBox="0 0 52 52" class="pointer-events-none absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
+                <circle cx="26" cy="26" r="22" fill="none" stroke="#7A89A6" stroke-opacity="0.3" stroke-width="3" />
+                <circle
+                  id="hud-hold-progress"
+                  cx="26"
+                  cy="26"
+                  r="22"
+                  fill="none"
+                  stroke="#FF9F1C"
+                  stroke-width="3"
+                  stroke-dasharray="138.23"
+                  stroke-dashoffset="138.23"
+                />
+              </svg>
+              <span class="font-mono-telemetry text-[9px] font-bold text-[var(--color-text-primary)] uppercase">
+                HOLD
+              </span>
+            </button>
+            <span
+              id="hud-hold-status"
+              class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] uppercase"
+            >
+              Scan all 5 points to unlock link
+            </span>
+          </div>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div
+          id="expedition-pause-overlay"
+          hidden
+          class="pointer-events-auto absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-[color:rgba(9,13,22,0.88)] p-6 text-center"
+        >
+          <p class="font-mono-telemetry text-xs font-bold tracking-[0.16em] text-[var(--color-turquoise)] uppercase">
+            SIMULATION PAUSED
+          </p>
+          <h4 class="font-serif-display text-3xl text-[var(--color-text-primary)]">
+            Mission Holding Pattern
+          </h4>
+          <div class="flex flex-wrap items-center justify-center gap-2.5">
+            <button
+              type="button"
+              id="hud-resume-btn"
+              class="cursor-pointer border border-[var(--color-turquoise)] bg-[var(--color-turquoise-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
+            >
+              Resume [ESC]
+            </button>
+            <button
+              type="button"
+              id="hud-restart-btn"
+              class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-4 py-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-text-primary)] uppercase"
+            >
+              Return to Orbit Flight
+            </button>
+            <button
+              type="button"
+              id="hud-abort-btn"
+              class="cursor-pointer border border-[var(--color-border)] bg-[var(--color-void)] px-4 py-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-text-secondary)] uppercase"
+            >
+              Change Destination
+            </button>
+          </div>
+        </div>
+
+        <!-- Finish Card Overlay (DATA RECOVERED) -->
+        <div
+          id="expedition-complete-card"
+          hidden
+          role="region"
+          aria-label="Expedition completed"
+          class="pointer-events-auto absolute inset-0 z-30 flex flex-col justify-between overflow-y-auto bg-[color:rgba(9,13,22,0.95)] p-5 sm:p-7"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-amber-border)] pb-3">
+            <span class="inline-flex items-center gap-2 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-amber)] uppercase">
+              <span class="h-2 w-2 bg-[var(--color-amber)]" aria-hidden="true"></span>
+              DATA RECOVERED &middot; MONUMENT RECORDED
+            </span>
+            <span
+              id="hud-complete-scale"
+              class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]"
+            ></span>
+          </div>
+
+          <div class="my-auto space-y-4 py-4">
+            <h4
+              id="hud-complete-title"
+              class="font-serif-display text-3xl text-[var(--color-text-primary)] sm:text-4xl"
+            ></h4>
+            <ul id="hud-complete-legacy-list" class="space-y-2"></ul>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2.5 border-t border-[var(--color-border)] pt-4">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <a
+                id="hud-complete-archive-link"
+                href="#archive"
+                data-open-archive-plaque=""
+                class="inline-flex items-center gap-2 border border-[var(--color-amber)] bg-[var(--color-amber)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-void)] uppercase transition-colors hover:bg-[color:#ffb142]"
+              >
+                View placard in Archive
+              </a>
+              <button
+                type="button"
+                id="hud-complete-orbit-btn"
+                class="cursor-pointer border border-[var(--color-amber-border)] bg-[var(--color-amber-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-amber)] uppercase hover:border-[var(--color-amber)]"
+              >
+                Launch to Orbit [L]
+              </button>
+              <button
+                type="button"
+                id="hud-complete-another-btn"
+                class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-void)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase hover:bg-[var(--color-turquoise-dim)]"
+              >
+                Continue Exploring Planet
+              </button>
+            </div>
+            <a
+              id="hud-complete-simulator-link"
+              href="#simulator"
+              class="inline-flex items-center gap-2 border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-4 py-2 font-mono-telemetry text-xs tracking-[0.12em] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+            >
+              <span>03 // Enter Field Simulator</span>
+              <span aria-hidden="true">-&gt;</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- No-WebGL / Context Lost Fallback -->
+      <div
+        id="expedition-webgl-fallback"
+        hidden
+        class="flex h-full w-full flex-col items-center justify-center gap-3 bg-reticle-grid p-6 text-center"
+      >
+        <p class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-alert)] uppercase">
+          3D WEBGL VIEWPORT UNAVAILABLE
+        </p>
+        <p class="max-w-md text-xs leading-relaxed text-[var(--color-text-secondary)] sm:text-sm">
+          Hardware 3D acceleration was disabled or lost in this browser session. Every cataloged spacecraft, map, timeline, and NASA source remains accessible in the Surface Archive.
+        </p>
+        <a
+          href="#archive"
+          class="border border-[var(--color-turquoise)] bg-[var(--color-turquoise-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-turquoise)] uppercase"
+        >
+          05 // Open Surface Archive -&gt;
+        </a>
+      </div>
+
+      <noscript>
+        <div class="flex h-full w-full flex-col items-center justify-center gap-3 bg-reticle-grid p-6 text-center">
+          <p class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-turquoise)] uppercase">
+            JAVASCRIPT REQUIRED FOR 3D SIMULATOR
+          </p>
+          <p class="max-w-md text-xs text-[var(--color-text-secondary)]">
+            Enable JavaScript to run the WebGL Orbital Flight &amp; Surface Explorer, or jump directly to the static archival catalog below.
+          </p>
+          <a
+            href="#archive"
+            class="border border-[var(--color-turquoise)] bg-[var(--color-turquoise-dim)] px-4 py-2 font-mono-telemetry text-xs font-bold text-[var(--color-turquoise)] uppercase"
+          >
+            05 // Inspect Surface Archive -&gt;
+          </a>
+        </div>
+      </noscript>
+    </div>
+
+    <!-- Screen Reader Live Telemetry Region -->
+    <div id="expedition-live-region" class="sr-only" aria-live="polite"></div>
+  </div>
+
+  <script
+    type="application/json"
+    id="expedition-catalog-data"
+    set:html={JSON.stringify(expeditionCatalog)}
+  />
+  <script>
+    import { initExpeditionSection } from '../lib/expedition';
+
+    initExpeditionSection();
+
+    const section = document.getElementById('expedition');
+    const stage = document.getElementById('expedition-stage');
+    const siteBar = document.getElementById('hud-site-bar');
+    const vueloContainer = document.getElementById('expedition-vuelo-container');
+    const vueloFrame = document.getElementById('expedition-vuelo-frame') as HTMLIFrameElement | null;
+    const launchBtn = document.getElementById('expedition-standby-launch-btn');
+    const targetMoonBtn = document.getElementById('hud-target-moon') as HTMLButtonElement | null;
+    const targetMarsBtn = document.getElementById('hud-target-mars') as HTMLButtonElement | null;
+    const assistBtn = document.getElementById('hud-assist-btn') as HTMLButtonElement | null;
+    const skipBtn = document.getElementById('hud-skip-btn') as HTMLButtonElement | null;
+    const pauseBtn = document.getElementById('hud-pause-btn') as HTMLButtonElement | null;
+    const resumeBtn = document.getElementById('hud-resume-btn') as HTMLButtonElement | null;
+    const exitBtn = document.getElementById('hud-exit-btn') as HTMLButtonElement | null;
+    const pauseOverlay = document.getElementById('expedition-pause-overlay');
+    const baseVueloUrl = section?.getAttribute('data-vuelo-url') || '/vuelo';
+
+    let lastDepartedBody: 'mars' | 'moon' | null = null;
+    let syncingTarget = false;
+    let handingOff = false;
+
+    function openVueloFlightLayer(fromBody?: 'mars' | 'moon' | null) {
+      if (!vueloContainer || !vueloFrame) return;
+      handingOff = false;
+
+      // Pausar el motor interno de #expedition mientras /vuelo está activo
+      // para que no avance en segundo plano hacia Marte por su cuenta
+      setTimeout(() => {
+        if (!vueloContainer.hidden && pauseOverlay && pauseOverlay.hidden) {
+          pauseBtn?.click();
+          if (pauseOverlay) pauseOverlay.style.visibility = 'hidden';
+        }
+      }, 40);
+
+      const targetUrl = fromBody ? `${baseVueloUrl}?from=${fromBody}` : baseVueloUrl;
+      const resolvedUrl = new URL(targetUrl, window.location.origin).href;
+
+      vueloContainer.hidden = false;
+      if (siteBar) siteBar.style.display = 'none';
+
+      if (vueloFrame.src !== resolvedUrl) {
+        vueloFrame.src = targetUrl;
+      }
+
+      setTimeout(() => {
+        vueloFrame.focus();
+        vueloFrame.contentWindow?.focus();
+      }, 80);
+    }
+
+    function closeVueloFlightLayer() {
+      if (!vueloContainer || !vueloFrame) return;
+      if (!vueloContainer.hidden) {
+        vueloContainer.hidden = true;
+        vueloFrame.src = 'about:blank';
+        if (siteBar) siteBar.style.display = '';
+        if (pauseOverlay) pauseOverlay.style.visibility = '';
+        const canvasEl = document.getElementById('expedition-canvas');
+        canvasEl?.focus();
+      }
+    }
+
+    // Pasar de /vuelo al motor nativo de #expedition asegurando que cargue el planeta exacto (Luna o Marte)
+    function handoffFlightToExpedition(targetBody: 'moon' | 'mars') {
+      if (handingOff) return;
+      handingOff = true;
+      lastDepartedBody = targetBody;
+
+      closeVueloFlightLayer();
+
+      // Reanudar el motor interno si estaba pausado durante el vuelo
+      if (pauseOverlay && !pauseOverlay.hidden) {
+        resumeBtn?.click();
+      }
+
+      // Seleccionar explícitamente el planeta alcanzado (Moon [1] o Mars [2])
+      syncingTarget = true;
+      if (targetBody === 'moon') {
+        targetMoonBtn?.click();
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '1' }));
+      } else {
+        targetMarsBtn?.click();
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit2', key: '2' }));
+      }
+      syncingTarget = false;
+
+      // Esperar un frame para que el motor interno fije el planeta (Luna o Marte)
+      // antes de saltar la Fase 01 hacia el descenso/superficie
+      requestAnimationFrame(() => {
+        skipBtn?.click();
+
+        // Verificación de respaldo: si el título del HUD no corresponde al planeta elegido,
+        // desplegar directamente los 3 sitios de ese planeta
+        setTimeout(() => {
+          const targetName = (
+            document.getElementById('hud-target-name')?.textContent || ''
+          ).toLowerCase();
+          const siteCoords = (
+            document.getElementById('hud-site-coords')?.textContent || ''
+          ).toLowerCase();
+
+          if (
+            targetBody === 'moon' &&
+            !targetName.includes('apollo') &&
+            !targetName.includes('luna') &&
+            !targetName.includes('surveyor') &&
+            !targetName.includes('moon') &&
+            !siteCoords.includes('moon')
+          ) {
+            const deployMoonBtn = document.querySelector(
+              '[data-expedition-deploy-body="moon"]'
+            ) as HTMLButtonElement | null;
+            deployMoonBtn?.click();
+          } else if (
+            targetBody === 'mars' &&
+            !targetName.includes('perseverance') &&
+            !targetName.includes('curiosity') &&
+            !targetName.includes('opportunity') &&
+            !targetName.includes('mars') &&
+            !siteCoords.includes('mars')
+          ) {
+            const deployMarsBtn = document.querySelector(
+              '[data-expedition-deploy-body="mars"]'
+            ) as HTMLButtonElement | null;
+            deployMarsBtn?.click();
+          }
+
+          handingOff = false;
+        }, 50);
+      });
+    }
+
+    // 1. Abrir /vuelo al hacer clic en Launch Space Simulator
+    launchBtn?.addEventListener('click', () => {
+      openVueloFlightLayer(null);
+    });
+
+    // 2. Si el usuario despliega directamente en Marte o la Luna, cerrar /vuelo
+    document.querySelectorAll('[data-expedition-deploy-body]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const body = btn.getAttribute('data-expedition-deploy-body');
+        if (body === 'mars' || body === 'moon') {
+          lastDepartedBody = body;
+        }
+        closeVueloFlightLayer();
+      });
+    });
+
+    // 3. Si el usuario pulsa Skip [ENTER] o Exit mientras vuela, entregar control al destino actual
+    skipBtn?.addEventListener('click', () => {
+      if (!vueloContainer?.hidden && !handingOff) {
+        const target = lastDepartedBody === 'moon' ? 'moon' : 'mars';
+        handoffFlightToExpedition(target);
+      }
+    });
+
+    exitBtn?.addEventListener('click', () => {
+      closeVueloFlightLayer();
+    });
+
+    // 4. Si el usuario vuelve a órbita con cualquiera de los botones [L], abrir /vuelo
+    const orbitBtnIds = [
+      'hud-orbit-btn',
+      'hud-touchdown-orbit-btn',
+      'hud-drive-orbit-btn',
+      'hud-inspect-orbit-btn',
+      'hud-complete-orbit-btn',
+      'hud-restart-btn',
+    ];
+
+    orbitBtnIds.forEach((id) => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        openVueloFlightLayer(lastDepartedBody);
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (!vueloContainer?.hidden) return;
+      const phase = stage?.getAttribute('data-phase');
+      if (phase && phase !== 'standby' && (e.code === 'KeyL' || e.key.toLowerCase() === 'l')) {
+        setTimeout(() => openVueloFlightLayer(lastDepartedBody), 30);
+      }
+    });
+
+    // 5. Configurar el interior del iframe /vuelo sin ocultar los padres de #juego
+    vueloFrame?.addEventListener('load', () => {
+      try {
+        const win = vueloFrame.contentWindow;
+        const doc = vueloFrame.contentDocument;
+        if (!win || !doc || win.location.href === 'about:blank') return;
+
+        const path = win.location.pathname;
+        if (path.includes('aterrizaje-luna')) {
+          handoffFlightToExpedition('moon');
+          return;
+        }
+        if (path.includes('aterrizaje')) {
+          handoffFlightToExpedition('mars');
+          return;
+        }
+
+        const style = doc.createElement('style');
+        style.textContent = `
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: #010106 !important;
+          }
+          header, nav, footer {
+            display: none !important;
+          }
+          #juego {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            margin: 0 !important;
+            border: 0 !important;
+            z-index: 99999 !important;
+          }
+          #hud-telemetry {
+            top: 4.5rem !important;
+          }
+        `;
+        doc.head.appendChild(style);
+        win.dispatchEvent(new Event('resize'));
+
+        // Sincronizar cambio de objetivo desde /vuelo hacia los botones de #expedition
+        win.addEventListener('mission:target-changed', ((e: CustomEvent) => {
+          if (syncingTarget) return;
+          const t = e.detail?.target;
+          syncingTarget = true;
+          if (t === 'moon') {
+            lastDepartedBody = 'moon';
+            targetMoonBtn?.click();
+          } else if (t === 'mars') {
+            lastDepartedBody = 'mars';
+            targetMarsBtn?.click();
+          }
+          syncingTarget = false;
+        }) as EventListener);
+
+        win.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.code === 'Enter') {
+            e.preventDefault();
+            const target = lastDepartedBody === 'moon' ? 'moon' : 'mars';
+            handoffFlightToExpedition(target);
+          } else if (e.code === 'Escape') {
+            e.preventDefault();
+            closeVueloFlightLayer();
+          }
+        });
+
+        win.focus();
+      } catch {
+        // Ignorar estados transitorios
+      }
+    });
+
+    // Sincronizar botones Moon [1], Mars [2] y Auto-Cruise [G] de la barra superior hacia /vuelo
+    targetMoonBtn?.addEventListener('click', () => {
+      lastDepartedBody = 'moon';
+      if (syncingTarget) return;
+      if (!vueloContainer?.hidden && vueloFrame?.contentWindow) {
+        syncingTarget = true;
+        vueloFrame.contentWindow.dispatchEvent(
+          new CustomEvent('mission:select-target', { detail: { target: 'moon' } })
+        );
+        syncingTarget = false;
+        vueloFrame.contentWindow.focus();
+      }
+    });
+
+    targetMarsBtn?.addEventListener('click', () => {
+      lastDepartedBody = 'mars';
+      if (syncingTarget) return;
+      if (!vueloContainer?.hidden && vueloFrame?.contentWindow) {
+        syncingTarget = true;
+        vueloFrame.contentWindow.dispatchEvent(
+          new CustomEvent('mission:select-target', { detail: { target: 'mars' } })
+        );
+        syncingTarget = false;
+        vueloFrame.contentWindow.focus();
+      }
+    });
+
+    assistBtn?.addEventListener('click', () => {
+      if (!vueloContainer?.hidden && vueloFrame?.contentWindow) {
+        vueloFrame.contentWindow.dispatchEvent(
+          new KeyboardEvent('keydown', { code: 'KeyG', key: 'g' })
+        );
+        vueloFrame.contentWindow.focus();
+      }
+    });
+
+    // Escuchar mensaje directo desde transit-mission.js cuando la nave alcanza la Luna o Marte
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'vuelo:target-reached') {
+        const target = e.data.target === 'moon' ? 'moon' : 'mars';
+        handoffFlightToExpedition(target);
+      }
+    });
+  </script>
+</section>
+
+<style>
+  .expedition-mode-btn[aria-pressed='true'] {
+    border-color: var(--color-turquoise);
+    background-color: var(--color-turquoise-dim);
+    color: var(--color-turquoise);
+  }
+
+  .expedition-discovery-pill[data-discovery-state='inspected'] {
+    border-color: var(--color-turquoise-border);
+    background-color: var(--color-turquoise-dim);
+    color: var(--color-turquoise);
+  }
+
+  .expedition-discovery-pill[data-discovery-state='recovered'] {
+    border-color: var(--color-amber-border);
+    background-color: var(--color-amber-dim);
+    color: var(--color-amber);
+  }
+
+  #expedition-stage:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    aspect-ratio: auto;
+    border: 0;
+  }
+</style>

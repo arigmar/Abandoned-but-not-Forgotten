@@ -1,0 +1,57 @@
+{
+  "id": "apollo-11-easep",
+  "name": "Apollo 11 EASEP",
+  "nssdcId": "1969-059C",
+  "agency": "NASA",
+  "body": "moon",
+  "type": "instrument-station",
+  "launchDate": "1969-07-16",
+  "lastContactDate": "1969-08-25",
+  "site": {
+    "name": "Mare Tranquillitatis (Tranquility Base)",
+    "lat": 0.6742,
+    "lon": 23.4731,
+    "description": "Deployed south of the Apollo 11 Lunar Module Eagle descent stage on the basaltic plain of Mare Tranquillitatis."
+  },
+  "endCause": "The Passive Seismic Experiment Package (PSEP) command receiver stopped responding at 04:00 UTC on August 25, 1969 due to overheating during lunar midday.",
+  "scientificValue": "Deployed during the first human lunar landing, the Early Apollo Scientific Experiments Package (EASEP) established the first seismic and laser-ranging outpost on the Moon. Its telemetry captured the Moon's distinct seismic scattering behavior, while its passive Laser Ranging Retroreflector remains measurable from Earth decades later.",
+  "kidSummary": "Left at Tranquility Base by Apollo 11 astronauts, this science station measured the Moon's first quakes and placed a 100-mirror panel that Earth telescopes still bounce lasers off today.",
+  "sizeFact": "3 weeks of seismic data · 100-prism laser mirror still active",
+  "legacy": [
+    {
+      "finding": "Recorded the first extraterrestrial seismic telemetry via the Passive Seismic Experiment Package across three weeks of surface operation.",
+      "sourceTitle": "NASA NSSDCA Master Catalog — Apollo 11 EASEP (1969-059C)",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1969-059C"
+    },
+    {
+      "finding": "Measured surface dust and thermal cycling effects on solar-powered electronics using the Lunar Dust Detector.",
+      "sourceTitle": "NASA Science — Apollo 11 Mission Overview",
+      "sourceUrl": "https://science.nasa.gov/mission/apollo-11/"
+    },
+    {
+      "finding": "Emplaced the 100-prism Laser Ranging Retroreflector (LRRR), enabling ongoing Earth–Moon distance measurements down to millimeter precision.",
+      "sourceTitle": "NASA Science — Apollo 11 Mission Overview",
+      "sourceUrl": "https://science.nasa.gov/mission/apollo-11/"
+    }
+  ],
+  "verification": "verified",
+  "sources": [
+    {
+      "title": "NASA NSSDCA Master Catalog — Apollo 11 EASEP / LM (1969-059C)",
+      "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1969-059C",
+      "accessedDate": "2026-11-14"
+    },
+    {
+      "title": "NASA Science — Apollo 11",
+      "url": "https://science.nasa.gov/mission/apollo-11/",
+      "accessedDate": "2026-11-14"
+    }
+  ],
+  "image": {
+    "file": "../../assets/artifacts/apollo-11-easep.svg",
+    "alt": "Monochrome technical schematic of the Apollo 11 EASEP surface instruments showing the Passive Seismic Experiment Package with twin solar panels alongside the angled Laser Ranging Retroreflector array.",
+    "credit": "Archival technical schematic based on NASA Apollo 11 EASEP documentation",
+    "originalUrl": "https://science.nasa.gov/mission/apollo-11/"
+  },
+  "featured": false
+}

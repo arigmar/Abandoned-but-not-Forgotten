@@ -1,0 +1,371 @@
+---
+import { formatCoordinates, type Artifact } from '../lib/archive';
+
+interface Props {
+  artifacts: Artifact[];
+}
+
+const { artifacts } = Astro.props;
+
+const marsArtifacts = artifacts.filter((a) => a.body === 'mars');
+const moonArtifacts = artifacts.filter((a) => a.body === 'moon');
+
+const latLines = [-60, -30, 0, 30, 60];
+const lonLines = [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150];
+
+function projectPin(lat: number | 'pending', lon: number | 'pending') {
+  if (lat === 'pending' || lon === 'pending') return null;
+  const cx = Number((lon + 180).toFixed(2));
+  const cy = Number((90 - lat).toFixed(2));
+  return { cx, cy };
+}
+
+const panels = [
+  {
+    body: 'mars' as const,
+    label: 'MARS // EQUIRECTANGULAR SURFACE ATLAS',
+    subtitle: 'MARS LANDING MAP · LATITUDE & LONGITUDE (180°W TO 180°E)',
+    items: marsArtifacts,
+  },
+  {
+    body: 'moon' as const,
+    label: 'MOON // EQUIRECTANGULAR SURFACE ATLAS',
+    subtitle: 'MOON LANDING MAP · NEARSIDE FACES EARTH AT 0° PM',
+    items: moonArtifacts,
+  },
+];
+---
+
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label="Planetary surface coordinate atlases">
+  {
+    panels.map((panel) => (
+      <div class="surface-slate relative flex flex-col p-4" data-atlas-panel={panel.body}>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5">
+          <div>
+            <h3 class="font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-text-primary)] uppercase">
+              {panel.label}
+            </h3>
+            <p class="mt-0.5 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]">
+              {panel.subtitle}
+            </p>
+          </div>
+          <span
+            data-atlas-count={panel.body}
+            class="border border-[var(--color-border)] bg-[var(--color-void)] px-2 py-0.5 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-secondary)]"
+          >
+            {panel.items.length} SITES
+          </span>
+        </div>
+
+        <div class="relative border border-[var(--color-border)] bg-[var(--color-void)]">
+          <svg
+            viewBox="0 0 360 180"
+            class="block h-auto w-full"
+            role="img"
+            aria-label={`${panel.body === 'mars' ? 'Mars' : 'Moon'} equirectangular landing site atlas`}
+          >
+            <!-- Latitude lines -->
+            {latLines.map((lat) => {
+              const y = 90 - lat;
+              return (
+                <line
+                  x1="0"
+                  y1={y}
+                  x2="360"
+                  y2={y}
+                  stroke="#7A89A6"
+                  stroke-opacity={lat === 0 ? '0.35' : '0.16'}
+                  stroke-width={lat === 0 ? '0.8' : '0.5'}
+                  stroke-dasharray={lat === 0 ? undefined : '2 3'}
+                />
+              );
+            })}
+
+            <!-- Longitude lines -->
+            {lonLines.map((lon) => {
+              const x = lon + 180;
+              return (
+                <line
+                  x1={x}
+                  y1="0"
+                  x2={x}
+                  y2="180"
+                  stroke="#7A89A6"
+                  stroke-opacity={lon === 0 ? '0.35' : '0.16'}
+                  stroke-width={lon === 0 ? '0.8' : '0.5'}
+                  stroke-dasharray={lon === 0 ? undefined : '2 3'}
+                />
+              );
+            })}
+
+            <!-- Outer map frame -->
+            <rect
+              x="0.5"
+              y="0.5"
+              width="359"
+              height="179"
+              fill="none"
+              stroke="#7A89A6"
+              stroke-opacity="0.28"
+              stroke-width="1"
+            />
+
+            <!-- Hand-built schematic terrain landmarks for planetary orientation -->
+            {panel.body === 'mars' ? (
+              <g aria-hidden="true">
+                {/* Tharsis volcanic province (western hemisphere) */}
+                <path
+                  d="M36 62 C52 46, 86 48, 96 68 C104 84, 92 104, 68 106 C46 106, 28 84, 36 62 Z"
+                  fill="#7A89A6"
+                  fill-opacity="0.06"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.22"
+                  stroke-width="0.6"
+                  stroke-dasharray="2 2"
+                />
+                {/* Valles Marineris canyon rift */}
+                <path
+                  d="M84 101 Q110 106 138 103"
+                  fill="none"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.34"
+                  stroke-width="1.2"
+                  stroke-linecap="round"
+                />
+                {/* Elysium volcanic rise (eastern hemisphere) */}
+                <ellipse
+                  cx="322"
+                  cy="68"
+                  rx="20"
+                  ry="16"
+                  fill="#7A89A6"
+                  fill-opacity="0.06"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.22"
+                  stroke-width="0.6"
+                  stroke-dasharray="2 2"
+                />
+                {/* Hellas impact basin */}
+                <ellipse
+                  cx="250"
+                  cy="132"
+                  rx="24"
+                  ry="16"
+                  fill="#7A89A6"
+                  fill-opacity="0.07"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.26"
+                  stroke-width="0.6"
+                />
+                <text x="48" y="80" fill="#7A89A6" fill-opacity="0.52" font-family="monospace" font-size="5.2">THARSIS</text>
+                <text x="86" y="113" fill="#7A89A6" fill-opacity="0.52" font-family="monospace" font-size="5">VALLES MARINERIS</text>
+                <text x="234" y="134" fill="#7A89A6" fill-opacity="0.52" font-family="monospace" font-size="5">HELLAS BASIN</text>
+                <text x="307" y="70" fill="#7A89A6" fill-opacity="0.52" font-family="monospace" font-size="5">ELYSIUM</text>
+              </g>
+            ) : (
+              <g aria-hidden="true">
+                {/* Lunar nearside Earth-facing zone bracket (~90°W to 90°E) */}
+                <rect
+                  x="90"
+                  y="14"
+                  width="180"
+                  height="152"
+                  fill="#7A89A6"
+                  fill-opacity="0.03"
+                  stroke="#2EC4B6"
+                  stroke-opacity="0.16"
+                  stroke-width="0.6"
+                  stroke-dasharray="3 3"
+                />
+                {/* Oceanus Procellarum */}
+                <path
+                  d="M114 58 C126 44, 152 48, 158 72 C164 94, 152 112, 132 108 C114 102, 106 76, 114 58 Z"
+                  fill="#7A89A6"
+                  fill-opacity="0.08"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.24"
+                  stroke-width="0.6"
+                />
+                {/* Mare Imbrium */}
+                <circle
+                  cx="164"
+                  cy="57"
+                  r="15"
+                  fill="#7A89A6"
+                  fill-opacity="0.09"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.28"
+                  stroke-width="0.6"
+                />
+                {/* Mare Serenitatis & Mare Tranquillitatis */}
+                <circle
+                  cx="198"
+                  cy="63"
+                  r="11"
+                  fill="#7A89A6"
+                  fill-opacity="0.08"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.24"
+                  stroke-width="0.6"
+                />
+                <ellipse
+                  cx="210"
+                  cy="83"
+                  rx="15"
+                  ry="10"
+                  fill="#7A89A6"
+                  fill-opacity="0.08"
+                  stroke="#7A89A6"
+                  stroke-opacity="0.26"
+                  stroke-width="0.6"
+                />
+                <text x="150" y="23" fill="#2EC4B6" fill-opacity="0.55" font-family="monospace" font-size="5">NEARSIDE (FACES EARTH)</text>
+                <text x="115" y="75" fill="#7A89A6" fill-opacity="0.55" font-family="monospace" font-size="4.8">PROCELLARUM</text>
+                <text x="148" y="40" fill="#7A89A6" fill-opacity="0.55" font-family="monospace" font-size="4.8">MARE IMBRIUM</text>
+                <text x="197" y="99" fill="#7A89A6" fill-opacity="0.55" font-family="monospace" font-size="4.8">TRANQUILLITATIS</text>
+              </g>
+            )}
+
+            <!-- Coordinate calibration labels -->
+            <text x="5" y="10" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="6">60°N</text>
+            <text x="5" y="88" fill="#7A89A6" fill-opacity="0.7" font-family="monospace" font-size="6">0° EQ</text>
+            <text x="5" y="175" fill="#7A89A6" fill-opacity="0.6" font-family="monospace" font-size="6">60°S</text>
+            <text x="183" y="10" fill="#7A89A6" fill-opacity="0.65" font-family="monospace" font-size="6">0° PM</text>
+
+            <!-- Landing site pins -->
+            {panel.items.map((item) => {
+              const projected = projectPin(item.site.lat, item.site.lon);
+              if (!projected) return null;
+              const coordsLabel = formatCoordinates(item.site.lat, item.site.lon);
+              return (
+                <g
+                  class="atlas-pin cursor-pointer"
+                  tabindex="0"
+                  role="button"
+                  data-atlas-pin={item.id}
+                  data-body={item.body}
+                  data-type={item.type}
+                  data-name={item.name}
+                  data-site={item.site.name}
+                  data-coords={coordsLabel}
+                  data-launch-year={item.launchDate.slice(0, 4)}
+                  data-end-year={item.lastContactDate.slice(0, 4)}
+                  data-timeline-state="silent"
+                  data-filtered="true"
+                  aria-label={`${item.name} at ${item.site.name}, ${coordsLabel}. Press Enter to inspect museum plaque.`}
+                >
+                  {/* Generous transparent hit target for touch and pointer usability */}
+                  <circle cx={projected.cx} cy={projected.cy} r="12" fill="transparent" />
+                  <circle
+                    cx={projected.cx}
+                    cy={projected.cy}
+                    r="7.5"
+                    fill="none"
+                    stroke="#7A89A6"
+                    stroke-width="0.9"
+                    class="atlas-pin-ring"
+                  />
+                  <line
+                    x1={projected.cx - 10}
+                    y1={projected.cy}
+                    x2={projected.cx - 4.5}
+                    y2={projected.cy}
+                    stroke="#7A89A6"
+                    stroke-opacity="0.55"
+                    stroke-width="0.6"
+                    class="atlas-pin-cross"
+                  />
+                  <line
+                    x1={projected.cx + 4.5}
+                    y1={projected.cy}
+                    x2={projected.cx + 10}
+                    y2={projected.cy}
+                    stroke="#7A89A6"
+                    stroke-opacity="0.55"
+                    stroke-width="0.6"
+                    class="atlas-pin-cross"
+                  />
+                  <circle
+                    cx={projected.cx}
+                    cy={projected.cy}
+                    r="3.2"
+                    fill="#7A89A6"
+                    class="atlas-pin-core"
+                  />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <!-- Inline Telemetry Tooltip & Quick Pin Directory -->
+        <div
+          data-atlas-tooltip={panel.body}
+          class="mt-3 min-h-[2.75rem] border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-2 font-mono-telemetry text-[11px] text-[var(--color-text-secondary)]"
+        >
+          HOVER, FOCUS OR TAP A SURFACE PIN TO INSPECT COORDINATES · CLICK TO OPEN PLAQUE
+        </div>
+
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
+          {panel.items.map((item) => (
+            <button
+              type="button"
+              data-atlas-chip={item.id}
+              data-open-plaque={item.id}
+              class="border border-[var(--color-border)] bg-[var(--color-void)] px-2 py-1 font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .atlas-pin:focus {
+    outline: none;
+  }
+
+  .atlas-pin[data-filtered='false'] {
+    opacity: 0.16;
+    pointer-events: none;
+  }
+
+  .atlas-pin[data-timeline-state='pre-launch'] {
+    opacity: 0.25;
+  }
+
+  .atlas-pin[data-timeline-state='pre-launch'] .atlas-pin-ring {
+    stroke-dasharray: 2 2;
+  }
+
+  .atlas-pin[data-timeline-state='operating'] .atlas-pin-core {
+    fill: var(--color-amber);
+  }
+
+  .atlas-pin[data-timeline-state='operating'] .atlas-pin-ring {
+    stroke: var(--color-amber);
+    animation: amber-pulse-ring 2s ease-in-out infinite;
+  }
+
+  .atlas-pin:hover .atlas-pin-core,
+  .atlas-pin:focus-visible .atlas-pin-core,
+  .atlas-pin[data-active='true'] .atlas-pin-core {
+    fill: var(--color-turquoise);
+  }
+
+  .atlas-pin:hover .atlas-pin-ring,
+  .atlas-pin:focus-visible .atlas-pin-ring,
+  .atlas-pin[data-active='true'] .atlas-pin-ring {
+    stroke: var(--color-turquoise);
+    stroke-width: 1.4;
+  }
+
+  .atlas-pin:hover .atlas-pin-cross,
+  .atlas-pin:focus-visible .atlas-pin-cross {
+    stroke: var(--color-turquoise);
+    stroke-opacity: 0.9;
+  }
+</style>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <rect width="640" height="360" fill="#090D16" />
+  <g stroke="#7A89A6" stroke-opacity="0.18" stroke-width="1">
+    <path d="M0 60H640M0 120H640M0 180H640M0 240H640M0 300H640" />
+    <path d="M80 0V360M160 0V360M240 0V360M320 0V360M400 0V360M480 0V360M560 0V360" />
+  </g>
+  <rect x="20" y="20" width="600" height="320" stroke="#7A89A6" stroke-opacity="0.45" stroke-width="1" />
+  <text x="36" y="46" fill="#7A89A6" font-family="monospace" font-size="11" letter-spacing="2">NASA / JPL / CNES / DLR · NSSDCA 2018-042A · INSIGHT</text>
+  <text x="36" y="324" fill="#7A89A6" font-family="monospace" font-size="10">ELYSIUM PLANITIA · 4.5024° N, 135.6234° E · LANDER SCHEMATIC</text>
+  <line x1="90" y1="274" x2="550" y2="274" stroke="#7A89A6" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="4 4" />
+  <g stroke="#E6ECF5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="176" cy="186" r="56" fill="#131B2E" stroke="#7A89A6" />
+    <circle cx="176" cy="186" r="44" stroke="#7A89A6" stroke-dasharray="3 3" />
+    <circle cx="464" cy="186" r="56" fill="#131B2E" stroke="#7A89A6" />
+    <circle cx="464" cy="186" r="44" stroke="#7A89A6" stroke-dasharray="3 3" />
+    <polygon points="246,162 394,162 406,192 234,192" fill="#131B2E" />
+    <rect x="275" y="138" width="40" height="24" fill="#131B2E" />
+    <line x1="258" y1="192" x2="230" y2="270" />
+    <line x1="382" y1="192" x2="410" y2="270" />
+    <line x1="320" y1="192" x2="320" y2="270" />
+    <ellipse cx="230" cy="272" rx="14" ry="4" fill="#131B2E" />
+    <ellipse cx="410" cy="272" rx="14" ry="4" fill="#131B2E" />
+    <ellipse cx="320" cy="272" rx="14" ry="4" fill="#131B2E" />
+    <path d="M292 256 C292 236, 348 236, 348 256 L354 274 L286 274 Z" fill="#131B2E" stroke="#E6ECF5" />
+    <path d="M376 162 L416 118 L452 142" stroke="#7A89A6" />
+  </g>
+  <g fill="#7A89A6" font-family="monospace" font-size="9">
+    <text x="148" y="118">SOLAR ARRAY</text>
+    <text x="274" y="295">SEIS SEISMOMETER</text>
+    <text x="430" y="114">IDA ARM</text>
+  </g>
+</svg>

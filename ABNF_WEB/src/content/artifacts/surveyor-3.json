@@ -1,0 +1,57 @@
+{
+  "id": "surveyor-3",
+  "name": "Surveyor 3",
+  "nssdcId": "1967-035A",
+  "agency": "NASA / JPL / Hughes Aircraft",
+  "body": "moon",
+  "type": "lander",
+  "launchDate": "1967-04-17",
+  "lastContactDate": "1967-05-04",
+  "site": {
+    "name": "Oceanus Procellarum (Surveyor Crater)",
+    "lat": -3.016,
+    "lon": -23.418,
+    "description": "Interior wall of a 200-meter crater in southeastern Oceanus Procellarum, later visited on foot by the Apollo 12 crew in November 1969."
+  },
+  "endCause": "Communications ended after sunset on May 4, 1967 as the lander entered lunar night; electronics did not reactivate after the two-week cryogenic freeze.",
+  "scientificValue": "Surveyor 3 conducted the first in-situ mechanical trenching of lunar regolith alongside 6,315 television images, confirming that lunar soil possessed enough bearing strength to support crewed Apollo landings. Thirty-one months later, Apollo 12 astronauts inspected the dormant lander and returned its camera assembly to Earth to study long-term space exposure.",
+  "kidSummary": "Surveyor 3 scooped trenches up to 17.5 centimeters deep in Moon dust to prove astronauts could safely land there—and 31 months later, Apollo 12 astronauts actually walked over to inspect it.",
+  "sizeFact": "6,315 TV images · 17.5 cm regolith trench · Revisited by Apollo 12",
+  "legacy": [
+    {
+      "finding": "Transmitted 6,315 high-resolution television frames mapping the inner slope of Surveyor Crater in Oceanus Procellarum.",
+      "sourceTitle": "NASA Science — Surveyor 3",
+      "sourceUrl": "https://science.nasa.gov/mission/surveyor-3/"
+    },
+    {
+      "finding": "Excavated regolith trenches up to 17.5 centimeters deep with its Soil Mechanics Surface Sampler, validating lunar surface bearing stability for Apollo Lunar Modules.",
+      "sourceTitle": "NASA NSSDCA Master Catalog — 1967-035A",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1967-035A"
+    },
+    {
+      "finding": "Became the only uncrewed planetary probe physically revisited by humans on another world when Apollo 12 retrieved its television camera and scoop in November 1969.",
+      "sourceTitle": "NASA Science — Surveyor 3",
+      "sourceUrl": "https://science.nasa.gov/mission/surveyor-3/"
+    }
+  ],
+  "verification": "verified",
+  "sources": [
+    {
+      "title": "NASA Science — Surveyor 3",
+      "url": "https://science.nasa.gov/mission/surveyor-3/",
+      "accessedDate": "2026-11-14"
+    },
+    {
+      "title": "NASA NSSDCA Master Catalog — Surveyor 3 (1967-035A)",
+      "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1967-035A",
+      "accessedDate": "2026-11-14"
+    }
+  ],
+  "image": {
+    "file": "../../assets/artifacts/surveyor-3.svg",
+    "alt": "Monochrome technical schematic of the NASA Surveyor 3 lunar lander with tripod landing gear, vertical mast with solar panel and high-gain antenna, television camera housing, and soil sampler arm.",
+    "credit": "Archival technical schematic based on NASA / JPL Surveyor 3 documentation",
+    "originalUrl": "https://science.nasa.gov/mission/surveyor-3/"
+  },
+  "featured": true
+}

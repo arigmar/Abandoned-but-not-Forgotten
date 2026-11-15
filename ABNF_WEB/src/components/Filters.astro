@@ -1,0 +1,132 @@
+---
+import { ARTIFACT_TYPE_LABELS, type ArtifactType } from '../lib/archive';
+
+interface Props {
+  totalCount: number;
+  availableTypes: ArtifactType[];
+}
+
+const { totalCount, availableTypes } = Astro.props;
+---
+
+<div class="surface-slate p-4 sm:p-5">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
+      <!-- Body Filter -->
+      <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by planetary body">
+        <span class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Body:
+        </span>
+        <button
+          type="button"
+          data-filter-body="all"
+          aria-pressed="true"
+          class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase transition-colors"
+        >
+          All
+        </button>
+        <button
+          type="button"
+          data-filter-body="mars"
+          aria-pressed="false"
+          class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase transition-colors"
+        >
+          Mars
+        </button>
+        <button
+          type="button"
+          data-filter-body="moon"
+          aria-pressed="false"
+          class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase transition-colors"
+        >
+          Moon
+        </button>
+      </div>
+
+      <!-- Hardware Type Filter -->
+      <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by hardware class">
+        <span class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          Class:
+        </span>
+        <button
+          type="button"
+          data-filter-type="all"
+          aria-pressed="true"
+          class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase transition-colors"
+        >
+          All
+        </button>
+        {
+          availableTypes.map((type) => (
+            <button
+              type="button"
+              data-filter-type={type}
+              aria-pressed="false"
+              class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1.5 font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)] uppercase transition-colors"
+            >
+              {ARTIFACT_TYPE_LABELS[type]}
+            </button>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] pt-3 lg:border-t-0 lg:pt-0">
+      <p
+        id="filter-live-status"
+        aria-live="polite"
+        class="font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-turquoise)]"
+      >
+        SHOWING {totalCount} OF {totalCount} SCIENTIFIC MONUMENTS
+      </p>
+      <button
+        type="button"
+        id="reset-filters-inline"
+        class="hidden border border-[var(--color-border-strong)] bg-[var(--color-void)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-primary)] uppercase hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+      >
+        Reset Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Reading Mode Switcher (Explorer vs Mission Log) -->
+  <div class="mt-3 flex flex-col gap-2 border-t border-[var(--color-border)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Reading style">
+      <span class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+        Reading Style:
+      </span>
+      <button
+        type="button"
+        data-reading-mode="explorer"
+        aria-pressed="true"
+        class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase transition-colors"
+      >
+        Explorer Mode
+      </button>
+      <button
+        type="button"
+        data-reading-mode="technical"
+        aria-pressed="false"
+        class="filter-btn border border-[var(--color-border)] bg-[var(--color-void)] px-3 py-1 font-mono-telemetry text-[11px] tracking-[0.1em] text-[var(--color-text-secondary)] uppercase transition-colors"
+      >
+        Mission Log
+      </button>
+    </div>
+    <p id="reading-mode-hint" class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
+      EXPLORER MODE · PLAIN-ENGLISH SUMMARIES &amp; REAL-WORLD SIZE COMPARISONS
+    </p>
+  </div>
+</div>
+
+<style>
+  .filter-btn:hover {
+    border-color: var(--color-turquoise-border);
+    color: var(--color-text-primary);
+  }
+
+  .filter-btn[aria-pressed='true'] {
+    border-color: var(--color-turquoise);
+    background-color: var(--color-turquoise-dim);
+    color: var(--color-turquoise);
+  }
+</style>

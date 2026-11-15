@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <rect width="640" height="360" fill="#090D16" />
+  <g stroke="#7A89A6" stroke-opacity="0.18" stroke-width="1">
+    <path d="M0 60H640M0 120H640M0 180H640M0 240H640M0 300H640" />
+    <path d="M80 0V360M160 0V360M240 0V360M320 0V360M400 0V360M480 0V360M560 0V360" />
+  </g>
+  <rect x="20" y="20" width="600" height="320" stroke="#7A89A6" stroke-opacity="0.45" stroke-width="1" />
+  <text x="36" y="46" fill="#7A89A6" font-family="monospace" font-size="11" letter-spacing="2">NASA / JPL-CALTECH · NSSDCA 2003-032A · MER-B</text>
+  <text x="36" y="324" fill="#7A89A6" font-family="monospace" font-size="10">MERIDIANI PLANUM · 1.9462° S, 5.5266° W · ROVER SCHEMATIC</text>
+  <line x1="110" y1="276" x2="530" y2="276" stroke="#7A89A6" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="4 4" />
+  <g stroke="#E6ECF5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="210,165 430,165 450,185 190,185" fill="#131B2E" />
+    <rect x="255" y="185" width="130" height="38" fill="#131B2E" />
+    <line x1="210" y1="175" x2="150" y2="155" />
+    <line x1="430" y1="175" x2="490" y2="155" />
+    <polygon points="145,155 215,165 215,180 145,170" fill="#131B2E" stroke="#7A89A6" />
+    <polygon points="495,155 425,165 425,180 495,170" fill="#131B2E" stroke="#7A89A6" />
+    <line x1="275" y1="165" x2="275" y2="104" />
+    <rect x="258" y="88" width="38" height="18" fill="#131B2E" />
+    <circle cx="268" cy="97" r="3" fill="#E6ECF5" />
+    <circle cx="286" cy="97" r="3" fill="#E6ECF5" />
+    <circle cx="385" cy="148" r="14" stroke="#7A89A6" />
+    <line x1="385" y1="148" x2="385" y2="165" />
+    <path d="M225 223 L200 256 M255 223 L265 256 M320 223 L320 256 M385 223 L375 256 M415 223 L440 256" />
+    <circle cx="200" cy="260" r="16" fill="#131B2E" />
+    <circle cx="265" cy="260" r="16" fill="#131B2E" />
+    <circle cx="320" cy="260" r="16" fill="#131B2E" />
+    <circle cx="375" cy="260" r="16" fill="#131B2E" />
+    <circle cx="440" cy="260" r="16" fill="#131B2E" />
+    <circle cx="200" cy="260" r="6" stroke="#7A89A6" />
+    <circle cx="320" cy="260" r="6" stroke="#7A89A6" />
+    <circle cx="440" cy="260" r="6" stroke="#7A89A6" />
+    <path d="M412 185 L475 208 L492 232" stroke="#7A89A6" />
+    <circle cx="496" cy="237" r="7" fill="#131B2E" />
+  </g>
+  <g fill="#7A89A6" font-family="monospace" font-size="9">
+    <text x="304" y="96">PANCAM MAST</text>
+    <text x="412" y="144">HGA DISH</text>
+    <text x="508" y="241">IDD ARM</text>
+  </g>
+</svg>

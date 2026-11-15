@@ -1,0 +1,98 @@
+---
+---
+
+<div
+  id="hold-to-link-panel"
+  class="border border-[var(--color-border-strong)] bg-[var(--color-void)] p-4 transition-colors"
+  data-link-state="dormant"
+>
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center gap-4">
+      <button
+        type="button"
+        id="hold-link-btn"
+        aria-describedby="hold-link-instructions"
+        class="group relative flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[var(--color-border-strong)] bg-[var(--color-slate)] transition-colors focus-visible:outline-2"
+      >
+        <svg viewBox="0 0 64 64" class="pointer-events-none absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
+          <circle
+            cx="32"
+            cy="32"
+            r="27"
+            fill="none"
+            stroke="#7A89A6"
+            stroke-opacity="0.28"
+            stroke-width="3"
+          />
+          <circle
+            id="hold-link-progress"
+            cx="32"
+            cy="32"
+            r="27"
+            fill="none"
+            stroke="#2EC4B6"
+            stroke-width="3"
+            stroke-dasharray="169.65"
+            stroke-dashoffset="169.65"
+            stroke-linecap="butt"
+          />
+        </svg>
+        <span
+          id="hold-link-glyph"
+          class="font-mono-telemetry text-[10px] font-bold tracking-[0.12em] text-[var(--color-text-primary)] uppercase"
+        >
+          HOLD
+        </span>
+      </button>
+
+      <div>
+        <p
+          id="hold-link-status"
+          class="font-mono-telemetry text-xs font-bold tracking-[0.12em] text-[var(--color-text-secondary)] uppercase"
+        >
+          SYMBOLIC LINK // DORMANT ARCHIVE STATE
+        </p>
+        <p
+          id="hold-link-instructions"
+          class="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]"
+        >
+          Press and hold for 1.2s (or hold Space / Enter, or quick tap) to perform a symbolic archival reactivation and reveal sourced scientific legacy findings. Surface hardware remains permanently inactive.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revealed Sourced Legacy Findings -->
+  <div id="plaque-legacy-container" hidden class="mt-4 border-t border-[var(--color-amber-border)] pt-4">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <span class="inline-flex items-center gap-2 font-mono-telemetry text-xs font-bold tracking-[0.14em] text-[var(--color-amber)] uppercase">
+        <span class="h-2 w-2 bg-[var(--color-amber)]" aria-hidden="true"></span>
+        DATA RECOVERED
+      </span>
+      <span class="font-mono-telemetry text-[10px] tracking-[0.08em] text-[var(--color-text-secondary)]">
+        SYMBOLIC ARCHIVAL REACTIVATION · HARDWARE REMAINS SILENT
+      </span>
+    </div>
+    <ul id="plaque-legacy-list" class="space-y-2.5"></ul>
+  </div>
+</div>
+
+<style>
+  #hold-to-link-panel[data-link-state='scanning'] {
+    border-color: var(--color-turquoise-border);
+    background-color: var(--color-turquoise-dim);
+  }
+
+  #hold-to-link-panel[data-link-state='scanning'] #hold-link-status {
+    color: var(--color-turquoise);
+  }
+
+  #hold-to-link-panel[data-link-state='recovered'] {
+    border-color: var(--color-amber-border);
+    background-color: var(--color-amber-dim);
+  }
+
+  #hold-to-link-panel[data-link-state='recovered'] #hold-link-status {
+    color: var(--color-amber);
+  }
+</style>

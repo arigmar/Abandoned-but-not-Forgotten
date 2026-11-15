@@ -1,0 +1,46 @@
+/* ==========================================================================
+   ROCKY TEAM Design Tokens — Single Source of Truth
+   Proportion 60-30-10:
+   - 60% Orbital Void (#090D16)
+   - 30% Mission Slate (#131B2E)
+   - 10% Accents: Radar Pulse (#2EC4B6), Kapton Amber (#FF9F1C), Alert (#E71D36)
+   ========================================================================== */
+
+:root {
+  /* Core Surfaces & Text */
+  --color-void: #090D16;
+  --color-slate: #131B2E;
+  --color-slate-raised: #182238;
+  --color-border: rgba(122, 137, 166, 0.24);
+  --color-border-strong: rgba(122, 137, 166, 0.45);
+  --color-reticle: rgba(122, 137, 166, 0.1);
+
+  --color-text-primary: #E6ECF5;
+  --color-text-secondary: #7A89A6;
+
+  /* Narrative Color Arc */
+  --color-dormant: #7A89A6;
+  --color-turquoise: #2EC4B6;
+  --color-turquoise-dim: rgba(46, 196, 182, 0.14);
+  --color-turquoise-border: rgba(46, 196, 182, 0.55);
+
+  --color-amber: #FF9F1C;
+  --color-amber-dim: rgba(255, 159, 28, 0.15);
+  --color-amber-border: rgba(255, 159, 28, 0.6);
+
+  /* Alert (4.3:1 on #090D16 — pair strictly with text badges, icons, or large text) */
+  --color-alert: #E71D36;
+  --color-alert-dim: rgba(231, 29, 54, 0.16);
+  --color-alert-border: rgba(231, 29, 54, 0.55);
+
+  /* Typography Stacks */
+  --font-serif: 'Instrument Serif', 'DejaVu Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'FiraCode Nerd Font Mono', 'DejaVu Sans Mono', monospace;
+  --font-sans: 'Hanken Grotesk', 'Fira Sans', 'DejaVu Sans', system-ui, sans-serif;
+
+  /* Layout & Timing */
+  --nav-height: 3.75rem;
+  --radius-sharp: 2px;
+  --transition-fast: 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-calm: 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}

@@ -1,0 +1,235 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import { SITE } from '../config/site';
+
+// Detect at build time whether the compiled TurboWarp single-HTML game bundle exists (.html or .htm)
+const publicGameDir = path.resolve(process.cwd(), 'public/game');
+const htmlBundlePath = path.join(publicGameDir, 'index.html');
+const htmBundlePath = path.join(publicGameDir, 'index.htm');
+const detectedFile = fs.existsSync(htmlBundlePath)
+  ? 'index.html'
+  : fs.existsSync(htmBundlePath)
+    ? 'index.htm'
+    : null;
+const hasGameBundle = detectedFile !== null;
+
+const baseClean = import.meta.env.BASE_URL.replace(/\/$/, '');
+const gameIframeSrc = detectedFile ? `${baseClean}/game/${detectedFile}` : `${baseClean}/game/index.html`;
+const aspectClass = SITE.gameAspectRatio === '4:3' ? 'aspect-[4/3]' : 'aspect-video';
+---
+
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+  <!-- Main 16:9 (or 4:3) Simulator Viewport -->
+  <div class="lg:col-span-9">
+    <div
+      id="simulator-viewport-frame"
+      class={`relative w-full overflow-hidden border border-[var(--color-border-strong)] bg-[var(--color-void)] ${aspectClass}`}
+      data-game-state={hasGameBundle ? 'ready' : 'standby'}
+    >
+      {
+        hasGameBundle ? (
+          <iframe
+            id="field-simulator-iframe"
+            src={gameIframeSrc}
+            title={`${SITE.name} Field Simulator`}
+            class="h-full w-full border-0 bg-[var(--color-void)]"
+            loading="lazy"
+            allow="fullscreen; autoplay"
+          />
+        ) : (
+          <div class="flex h-full w-full flex-col justify-between bg-reticle-grid p-4 sm:p-6">
+            <!-- Top Telemetry Header -->
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
+              <div class="flex items-center gap-2 font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-turquoise)]">
+                <span class="h-2 w-2 bg-[var(--color-turquoise)]" aria-hidden="true" />
+                <span>SIGNAL STANDBY · CALIBRATING TELEMETRY</span>
+              </div>
+              <span class="font-mono-telemetry text-[11px] tracking-[0.12em] text-[var(--color-text-secondary)]">
+                CANVAS {SITE.gameAspectRatio} · 60 FPS TARGET
+              </span>
+            </div>
+
+            <!-- Center Calibration Reticle -->
+            <div class="my-auto flex flex-col items-center justify-center py-4 text-center">
+              <svg
+                viewBox="0 0 120 120"
+                class="mb-3 h-20 w-20 sm:h-24 sm:w-24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle cx="60" cy="60" r="52" stroke="#7A89A6" stroke-opacity="0.35" stroke-dasharray="3 4" />
+                <circle cx="60" cy="60" r="34" stroke="#2EC4B6" stroke-opacity="0.55" />
+                <line x1="8" y1="60" x2="112" y2="60" stroke="#7A89A6" stroke-opacity="0.35" />
+                <line x1="60" y1="8" x2="60" y2="112" stroke="#7A89A6" stroke-opacity="0.35" />
+                <circle cx="60" cy="60" r="4" fill="#FF9F1C" />
+              </svg>
+              <p class="font-mono-telemetry text-xs font-bold tracking-[0.16em] text-[var(--color-text-primary)] uppercase sm:text-sm">
+                SIGNAL STANDBY / CALIBRATING TELEMETRY
+              </p>
+              <p class="mt-1.5 max-w-md text-xs text-[var(--color-text-secondary)] sm:text-sm">
+                TurboWarp Scratch build slot ready at <code class="font-mono-telemetry text-[var(--color-turquoise)]">public/game/index.html</code>. Drop the exported single-HTML payload to activate live surface navigation.
+              </p>
+            </div>
+
+            <!-- Interactive Sample Controls Bar -->
+            <div class="border-t border-[var(--color-border)] pt-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Simulator test controls">
+                  <button
+                    type="button"
+                    data-sim-key="MOVE"
+                    class="sim-test-btn border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+                  >
+                    [W/A/S/D] TRAVERSE
+                  </button>
+                  <button
+                    type="button"
+                    data-sim-key="SCAN"
+                    class="sim-test-btn border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+                  >
+                    [SPACE] PULSE SCANNER
+                  </button>
+                  <button
+                    type="button"
+                    data-sim-key="LINK"
+                    class="sim-test-btn border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2.5 py-1 font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-amber)] hover:text-[var(--color-amber)]"
+                  >
+                    [E] DEPLOY RELAY
+                  </button>
+                </div>
+                <span
+                  id="sim-test-readout"
+                  aria-live="polite"
+                  class="font-mono-telemetry text-[10px] tracking-[0.12em] text-[var(--color-text-secondary)]"
+                >
+                  CALIBRATION: IDLE
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </div>
+
+  <!-- Side Context Panel: Active Mission or Standby -->
+  <aside
+    class="flex flex-col justify-between border border-[var(--color-border)] bg-[var(--color-void)] p-4 lg:col-span-3"
+    aria-label="Artifact to rescue context panel"
+  >
+    <div>
+      <div class="flex items-center justify-between border-b border-[var(--color-border)] pb-2.5">
+        <span class="font-mono-telemetry text-[11px] tracking-[0.14em] text-[var(--color-text-secondary)] uppercase">
+          {hasGameBundle ? 'Surface Uplink' : 'Artifact To Rescue'}
+        </span>
+        {hasGameBundle ? (
+          <span class="border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-1.5 py-0.5 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)]">
+            LIVE
+          </span>
+        ) : (
+          <span class="border border-[var(--color-border-strong)] px-1.5 py-0.5 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-turquoise)]">
+            PENDING
+          </span>
+        )}
+      </div>
+
+      {hasGameBundle ? (
+        <div class="mt-4 space-y-3">
+          <p class="font-serif-display text-2xl text-[var(--color-text-primary)]">
+            Postcards from Silence
+          </p>
+          <p class="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+            Interactive Scratch field-ops mission loaded inside the 16:9 uplink frame. Click inside the viewport to begin surface reconnaissance and recover dormant spacecraft telemetry.
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              id="sim-fullscreen-btn"
+              class="cursor-pointer border border-[var(--color-turquoise-border)] bg-[var(--color-turquoise-dim)] px-2.5 py-2 font-mono-telemetry text-[10px] font-bold tracking-[0.1em] text-[var(--color-turquoise)] uppercase transition-colors hover:border-[var(--color-turquoise)]"
+            >
+              Fullscreen
+            </button>
+            <button
+              type="button"
+              id="sim-reload-btn"
+              class="cursor-pointer border border-[var(--color-border-strong)] bg-[var(--color-slate)] px-2.5 py-2 font-mono-telemetry text-[10px] tracking-[0.1em] text-[var(--color-text-primary)] uppercase transition-colors hover:border-[var(--color-turquoise)] hover:text-[var(--color-turquoise)]"
+            >
+              Restart Mission
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div class="mt-4 space-y-3">
+          <p class="font-serif-display text-2xl text-[var(--color-text-primary)]">
+            Awaiting Mission Target
+          </p>
+          <p class="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+            Once the TurboWarp field module is linked, this briefing slot will display target coordinates, hazard profile, and archival plaque telemetry for the active rescue run.
+          </p>
+        </div>
+      )}
+    </div>
+
+    <div class="mt-6 space-y-2 border-t border-[var(--color-border)] pt-3 font-mono-telemetry text-[11px]">
+      <div class="flex justify-between text-[var(--color-text-secondary)]">
+        <span>FRAME SPEC</span>
+        <span class="text-[var(--color-text-primary)]">{SITE.gameAspectRatio}</span>
+      </div>
+      <div class="flex justify-between text-[var(--color-text-secondary)]">
+        <span>PACKAGER</span>
+        <span class="text-[var(--color-text-primary)]">TURBOWARP HTML</span>
+      </div>
+      <div class="flex justify-between text-[var(--color-text-secondary)]">
+        <span>UPLINK</span>
+        <span class="text-[var(--color-turquoise)]">
+          {hasGameBundle ? 'ONLINE' : 'STANDBY'}
+        </span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const readout = document.getElementById('sim-test-readout');
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.sim-test-btn');
+  const labels: Record<string, string> = {
+    MOVE: 'CALIBRATION: TRAVERSE VECTOR OK',
+    SCAN: 'CALIBRATION: 2EC4B6 RADAR PING OK',
+    LINK: 'CALIBRATION: FF9F1C RELAY LOCK OK',
+  };
+
+  for (const btn of buttons) {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.simKey || '';
+      if (readout && labels[key]) {
+        readout.textContent = labels[key];
+      }
+    });
+  }
+
+  const viewportFrame = document.getElementById('simulator-viewport-frame');
+  const simulatorIframe = document.getElementById('field-simulator-iframe') as HTMLIFrameElement | null;
+  const fullscreenBtn = document.getElementById('sim-fullscreen-btn') as HTMLButtonElement | null;
+  const reloadBtn = document.getElementById('sim-reload-btn') as HTMLButtonElement | null;
+
+  fullscreenBtn?.addEventListener('click', () => {
+    const target = viewportFrame ?? simulatorIframe;
+    if (!target) return;
+    if (document.fullscreenElement === target) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.fullscreenEnabled) {
+      target.requestFullscreen().catch(() => {});
+    }
+  });
+
+  reloadBtn?.addEventListener('click', () => {
+    if (!simulatorIframe) return;
+    const src = simulatorIframe.getAttribute('src');
+    if (src) {
+      simulatorIframe.setAttribute('src', src);
+      simulatorIframe.focus();
+    }
+  });
+</script>
