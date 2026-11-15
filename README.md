@@ -38,10 +38,10 @@ Since the 1960s, NASA has left hardware across the solar system. School-age spac
 ## Screenshots
 
 <!-- Add screenshots to docs/screenshots/ and uncomment the lines below -->
-<!-- ![Home](docs/screenshots/home.png) -->
-<!-- ![Surface Archive](docs/screenshots/archive.png) -->
-<!-- ![Flight to Mars](docs/screenshots/flight.png) -->
-<!-- ![Descent](docs/screenshots/landing.png) -->
+[Home](docs/screenshots/home.png) 
+[Surface Archive](docs/screenshots/archive.png)
+[Flight to Mars](docs/screenshots/flight.png)
+[Descent](docs/screenshots/landing.png)
 
 ## What's Inside
 
