@@ -792,14 +792,28 @@ const vueloUrl = withBase('/vuelo');
     const assistBtn = document.getElementById('hud-assist-btn') as HTMLButtonElement | null;
     const skipBtn = document.getElementById('hud-skip-btn') as HTMLButtonElement | null;
     const pauseBtn = document.getElementById('hud-pause-btn') as HTMLButtonElement | null;
+    const resumeBtn = document.getElementById('hud-resume-btn') as HTMLButtonElement | null;
     const exitBtn = document.getElementById('hud-exit-btn') as HTMLButtonElement | null;
+    const pauseOverlay = document.getElementById('expedition-pause-overlay');
     const baseVueloUrl = section?.getAttribute('data-vuelo-url') || '/vuelo';
 
     let lastDepartedBody: 'mars' | 'moon' | null = null;
     let syncingTarget = false;
+    let handingOff = false;
 
     function openVueloFlightLayer(fromBody?: 'mars' | 'moon' | null) {
       if (!vueloContainer || !vueloFrame) return;
+      handingOff = false;
+
+      // Pausar el motor interno de #expedition mientras /vuelo está activo
+      // para que no avance en segundo plano hacia Marte por su cuenta
+      setTimeout(() => {
+        if (!vueloContainer.hidden && pauseOverlay && pauseOverlay.hidden) {
+          pauseBtn?.click();
+          if (pauseOverlay) pauseOverlay.style.visibility = 'hidden';
+        }
+      }, 40);
+
       const targetUrl = fromBody ? `${baseVueloUrl}?from=${fromBody}` : baseVueloUrl;
       const resolvedUrl = new URL(targetUrl, window.location.origin).href;
 
@@ -822,25 +836,80 @@ const vueloUrl = withBase('/vuelo');
         vueloContainer.hidden = true;
         vueloFrame.src = 'about:blank';
         if (siteBar) siteBar.style.display = '';
+        if (pauseOverlay) pauseOverlay.style.visibility = '';
         const canvasEl = document.getElementById('expedition-canvas');
         canvasEl?.focus();
       }
     }
 
-    // Pasar de /vuelo al motor nativo de #expedition cuando se alcanza la Luna o Marte
+    // Pasar de /vuelo al motor nativo de #expedition asegurando que cargue el planeta exacto (Luna o Marte)
     function handoffFlightToExpedition(targetBody: 'moon' | 'mars') {
+      if (handingOff) return;
+      handingOff = true;
       lastDepartedBody = targetBody;
+
+      closeVueloFlightLayer();
+
+      // Reanudar el motor interno si estaba pausado durante el vuelo
+      if (pauseOverlay && !pauseOverlay.hidden) {
+        resumeBtn?.click();
+      }
+
+      // Seleccionar explícitamente el planeta alcanzado (Moon [1] o Mars [2])
       syncingTarget = true;
       if (targetBody === 'moon') {
         targetMoonBtn?.click();
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', key: '1' }));
       } else {
         targetMarsBtn?.click();
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit2', key: '2' }));
       }
       syncingTarget = false;
 
-      closeVueloFlightLayer();
-      // Avanzar la Fase 01 de #expedition para que tome el control en el aterrizaje/superficie
-      skipBtn?.click();
+      // Esperar un frame para que el motor interno fije el planeta (Luna o Marte)
+      // antes de saltar la Fase 01 hacia el descenso/superficie
+      requestAnimationFrame(() => {
+        skipBtn?.click();
+
+        // Verificación de respaldo: si el título del HUD no corresponde al planeta elegido,
+        // desplegar directamente los 3 sitios de ese planeta
+        setTimeout(() => {
+          const targetName = (
+            document.getElementById('hud-target-name')?.textContent || ''
+          ).toLowerCase();
+          const siteCoords = (
+            document.getElementById('hud-site-coords')?.textContent || ''
+          ).toLowerCase();
+
+          if (
+            targetBody === 'moon' &&
+            !targetName.includes('apollo') &&
+            !targetName.includes('luna') &&
+            !targetName.includes('surveyor') &&
+            !targetName.includes('moon') &&
+            !siteCoords.includes('moon')
+          ) {
+            const deployMoonBtn = document.querySelector(
+              '[data-expedition-deploy-body="moon"]'
+            ) as HTMLButtonElement | null;
+            deployMoonBtn?.click();
+          } else if (
+            targetBody === 'mars' &&
+            !targetName.includes('perseverance') &&
+            !targetName.includes('curiosity') &&
+            !targetName.includes('opportunity') &&
+            !targetName.includes('mars') &&
+            !siteCoords.includes('mars')
+          ) {
+            const deployMarsBtn = document.querySelector(
+              '[data-expedition-deploy-body="mars"]'
+            ) as HTMLButtonElement | null;
+            deployMarsBtn?.click();
+          }
+
+          handingOff = false;
+        }, 50);
+      });
     }
 
     // 1. Abrir /vuelo al hacer clic en Launch Space Simulator
@@ -859,9 +928,12 @@ const vueloUrl = withBase('/vuelo');
       });
     });
 
-    // 3. Si el usuario pulsa Skip [ENTER] o Exit mientras vuela, cerrar /vuelo
+    // 3. Si el usuario pulsa Skip [ENTER] o Exit mientras vuela, entregar control al destino actual
     skipBtn?.addEventListener('click', () => {
-      closeVueloFlightLayer();
+      if (!vueloContainer?.hidden && !handingOff) {
+        const target = lastDepartedBody === 'moon' ? 'moon' : 'mars';
+        handoffFlightToExpedition(target);
+      }
     });
 
     exitBtn?.addEventListener('click', () => {
@@ -909,7 +981,6 @@ const vueloUrl = withBase('/vuelo');
           return;
         }
 
-        // Hacer que #juego ocupe todo el visor sin ocultar su contenedor <main> padre
         const style = doc.createElement('style');
         style.textContent = `
           html, body {
@@ -939,7 +1010,7 @@ const vueloUrl = withBase('/vuelo');
         doc.head.appendChild(style);
         win.dispatchEvent(new Event('resize'));
 
-        // Sincronizar cambio de objetivo sin crear bucle infinito
+        // Sincronizar cambio de objetivo desde /vuelo hacia los botones de #expedition
         win.addEventListener('mission:target-changed', ((e: CustomEvent) => {
           if (syncingTarget) return;
           const t = e.detail?.target;
@@ -957,10 +1028,11 @@ const vueloUrl = withBase('/vuelo');
         win.addEventListener('keydown', (e: KeyboardEvent) => {
           if (e.code === 'Enter') {
             e.preventDefault();
-            skipBtn?.click();
+            const target = lastDepartedBody === 'moon' ? 'moon' : 'mars';
+            handoffFlightToExpedition(target);
           } else if (e.code === 'Escape') {
             e.preventDefault();
-            pauseBtn?.click();
+            closeVueloFlightLayer();
           }
         });
 
@@ -1006,6 +1078,7 @@ const vueloUrl = withBase('/vuelo');
       }
     });
 
+    // Escuchar mensaje directo desde transit-mission.js cuando la nave alcanza la Luna o Marte
     window.addEventListener('message', (e) => {
       if (e.data?.type === 'vuelo:target-reached') {
         const target = e.data.target === 'moon' ? 'moon' : 'mars';
