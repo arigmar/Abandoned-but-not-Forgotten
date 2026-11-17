@@ -24,7 +24,7 @@ export const SITE = {
   // Single switchable aspect ratio constant for the embedded Field Simulator ('16:9' | '4:3')
   gameAspectRatio: '16:9' as AspectRatioOption,
 
-  // Fullscreen intro video shown on first visit (served from public/assets/intro.mp4)
+  // Fullscreen intro video shown on first visit (resolved via withAssetUrl against external storage)
   introVideoPath: '/assets/intro.mp4',
 
   // Reference build epoch in UTC ISO-8601

@@ -12,7 +12,7 @@ import {
 } from 'three';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { withBase } from '../base-path';
+import { withAssetUrl } from '../base-path';
 import { disposeObjectTree } from './utils';
 
 const DRACO_DECODER_URL = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
@@ -95,7 +95,7 @@ export function loadNormalizedGlbIntoGroup(
   } = options;
 
   loader.load(
-    withBase(publicPath),
+    withAssetUrl(publicPath),
     (gltf) => {
       const model = gltf.scene;
       if (isDisposed?.()) {

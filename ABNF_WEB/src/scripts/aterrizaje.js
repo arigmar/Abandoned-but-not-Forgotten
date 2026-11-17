@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { withBase } from '../lib/base-path';
+import { withAssetUrl } from '../lib/base-path';
 import { buildDistantEarth, launchLandingMission } from './landing-core';
 
 function crearTexturaMarte() {
@@ -96,7 +96,7 @@ launchLandingMission({
     scene.add(grupoEscenario);
 
     loader.load(
-      withBase('/assets/games/perseverance_rover_on_mars.glb'),
+      withAssetUrl('/assets/games/perseverance_rover_on_mars.glb'),
       (gltf) => {
         const modeloSuelo = gltf.scene;
         const caja = new THREE.Box3();

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { withBase } from '../lib/base-path';
+import { withAssetUrl, withBase } from '../lib/base-path';
 import {
   viewport,
   createHud,
@@ -235,7 +235,7 @@ function createSun(scene, gltfLoader, sunSpec) {
 
   if (sunSpec.urlGLB) {
     gltfLoader.load(
-      withBase(sunSpec.urlGLB),
+      withAssetUrl(sunSpec.urlGLB),
       (gltf) => {
         group.remove(temporalSol);
         const modeloSol = gltf.scene;
@@ -368,7 +368,7 @@ function createPlanet(scene, gltfLoader, spec) {
 
   if (spec.urlGLB) {
     gltfLoader.load(
-      withBase(spec.urlGLB),
+      withAssetUrl(spec.urlGLB),
       (gltf) => {
         group.remove(fallback);
         const modelo = gltf.scene;
@@ -559,7 +559,7 @@ export function launchTransitMission(config) {
   grupoPropulsores.add(fuegoDer);
 
   cargador.load(
-    withBase('/assets/games/spaceship.glb'),
+    withAssetUrl('/assets/games/spaceship.glb'),
     (gltf) => {
       modeloVisualNave.remove(cuerpoTemporal);
       const modeloNave = gltf.scene;

@@ -1,8 +1,8 @@
 ---
 import { SITE } from '../config/site';
-import { withBase } from '../lib/base-path';
+import { withAssetUrl } from '../lib/base-path';
 
-const videoSrc = withBase(SITE.introVideoPath);
+const videoSrc = withAssetUrl(SITE.introVideoPath);
 ---
 
 <div
@@ -31,7 +31,7 @@ const videoSrc = withBase(SITE.introVideoPath);
       TELEMETRY VIDEO STREAM UNAVAILABLE
     </p>
     <p class="max-w-md text-sm text-[var(--color-text-secondary)]">
-      Place the intro video file at <code class="font-mono-telemetry text-[var(--color-text-primary)]">public{SITE.introVideoPath}</code> to enable playback.
+      Unable to stream intro video from <code class="font-mono-telemetry break-all text-[var(--color-text-primary)]">{videoSrc}</code>.
     </p>
   </div>
 

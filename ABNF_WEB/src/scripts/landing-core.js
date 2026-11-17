@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { withBase } from '../lib/base-path';
+import { withAssetUrl, withBase } from '../lib/base-path';
 import {
   viewport,
   createHud,
@@ -51,7 +51,7 @@ export function buildDistantEarth(scene, loader, options = {}) {
   group.add(halo);
 
   loader.load(
-    withBase('/assets/games/earth.glb'),
+    withAssetUrl('/assets/games/earth.glb'),
     (gltf) => {
       group.remove(fallback);
       const model = gltf.scene;
@@ -193,7 +193,7 @@ export function launchLandingMission(config) {
 
   const materialesNave = [];
   cargador.load(
-    withBase('/assets/games/spaceship.glb'),
+    withAssetUrl('/assets/games/spaceship.glb'),
     (gltf) => {
       nave.remove(conoTemporal);
       const modeloNave = gltf.scene;
